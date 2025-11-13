@@ -52,5 +52,6 @@ extern HAL_TickFreq uwTickFreq;
 HAL_Status HAL_InitTick(uint32_t tick_priority);
 void HAL_IncTick(void);
 uint32_t HAL_GetTick(void);
+void HAL_DelayMS(uint32_t milliseconds);
 
 #endif

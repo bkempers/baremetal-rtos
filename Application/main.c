@@ -1,3 +1,4 @@
+#include "stm32h7rs_hal.h"
 #include "stm32h7rs_hal_rcc.h"
 #include <system.h>
 
@@ -39,20 +40,25 @@ void led_toggle(int led_num)
 
 int main(void)
 {
-    // HAL_Init();
+    HAL_Init();
     SystemClock_Config();
+    SysTick_Config(64000000);
+    __enable_irq();
 
     led_init();
     while(1)
     {
         led_toggle(1);
-        for(int i =0; i<500000; i++) {}
+        HAL_DelayMS(500);
+        // for(int i =0; i<500000; i++) {}
 
         led_toggle(2);
-        for(int i =0; i<500000; i++) {}
+        HAL_DelayMS(500);
+        // for(int i =0; i<500000; i++) {}
 
-         led_toggle(3);
-         for(int i =0; i<500000; i++) {}
+        led_toggle(3);
+        HAL_DelayMS(500);
+        // for(int i =0; i<500000; i++) {}
 
     }
 

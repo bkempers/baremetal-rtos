@@ -1,7 +1,7 @@
 add_library(HAL STATIC
     src/stm32h7rs_hal.c
     src/stm32h7rs_hal_rcc.c
-    # src/stm32h7rs_hal_gpio.c
+    src/stm32h7rs_hal_gpio.c
 )
 
 target_include_directories(HAL PUBLIC

@@ -1,9 +1,9 @@
 #include "stm32h7rs_hal.h"
 #include "stm32h7s3xx.h"
 
-__IO uint32_t uwTick;
-uint32_t uwTickPrio            = (1UL << __NVIC_PRIO_BITS); /* Invalid priority */
-HAL_TickFreq uwTickFreq = HAL_TICK_FREQ_DEFAULT;  /* 1KHz */
+volatile uint32_t tick;
+uint32_t tickPrio            = (1UL << __NVIC_PRIO_BITS); /* Invalid priority */
+HAL_TickFreq tickFreq = HAL_TICK_FREQ_DEFAULT;  /* 1KHz */
 
 HAL_Status HAL_Init(void)
 {
@@ -23,13 +23,13 @@ HAL_Status HAL_DeInit(void)
 HAL_Status HAL_InitTick(uint32_t tick_priority)
 {
     HAL_Status ret = HAL_OK;
-    if (SysTick_Config(SystemCoreClock / (1000U / (uint32_t)uwTickFreq)) == 0U)
+    if (SysTick_Config(SystemCoreClock / (1000U / (uint32_t)tickFreq)) == 0U)
     {
       /* Configure the SysTick IRQ priority */
       if (tick_priority < (1UL << __NVIC_PRIO_BITS))
       {
         NVIC_SetPriority(SysTick_IRQn, tick_priority);
-        uwTickPrio = tick_priority;
+        tickPrio = tick_priority;
       }
       else
       {
@@ -43,12 +43,30 @@ HAL_Status HAL_InitTick(uint32_t tick_priority)
     return ret;
 }
 
+void SysTick_Handler(void)
+{
+    tick++;
+}
+
 __weak void HAL_IncTick(void)
 {
-    uwTick += (uint32_t)uwTickFreq;
+    tick += (uint32_t)tickFreq;
 }
 
 __weak uint32_t HAL_GetTick(void)
 {
-    return uwTick;
+    return tick;
+}
+
+void HAL_DelayMS(uint32_t milliseconds)
+{
+  uint32_t start = tick;
+  uint32_t end = start + milliseconds;
+
+  if (end < start) // overflow
+  {
+    while (tick > start); // wait for ticks to wrap
+  }
+
+  while (tick < end);
 }

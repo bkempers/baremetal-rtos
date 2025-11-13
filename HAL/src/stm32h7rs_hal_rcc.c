@@ -75,22 +75,22 @@ HAL_Status HAL_RCC_OscConfig(RCC_OscInit *RCC_OscInitStruct) {
         SET_BIT(RCC->CR, RCC_CR_HSEON);
         
         // Wait for HSE to be ready
-        // tickstart = HAL_GetTick();
+        tickstart = HAL_GetTick();
         while (READ_BIT(RCC->CR, RCC_CR_HSERDY) == 0) {
-            // if ((HAL_GetTick() - tickstart) > HSE_STARTUP_TIMEOUT) {
-            //     return HAL_TIMEOUT;
-            // }
+            if ((HAL_GetTick() - tickstart) > HSE_STARTUP_TIMEOUT) {
+                return HAL_TIMEOUT;
+            }
         }
     } else {
         // Disable HSE
         CLEAR_BIT(RCC->CR, RCC_CR_HSEON);
         
         // Wait for HSE to be disabled
-        // tickstart = HAL_GetTick();
+        tickstart = HAL_GetTick();
         while (READ_BIT(RCC->CR, RCC_CR_HSERDY) != 0) {
-            // if ((HAL_GetTick() - tickstart) > HSE_STARTUP_TIMEOUT) {
-            //     return HAL_TIMEOUT;
-            // }
+            if ((HAL_GetTick() - tickstart) > HSE_STARTUP_TIMEOUT) {
+                return HAL_TIMEOUT;
+            }
         }
     }
     
@@ -100,11 +100,11 @@ HAL_Status HAL_RCC_OscConfig(RCC_OscInit *RCC_OscInitStruct) {
         SET_BIT(RCC->CR, RCC_CR_HSION);
         
         // Wait for HSI to be ready
-        // tickstart = HAL_GetTick();
+        tickstart = HAL_GetTick();
         while (READ_BIT(RCC->CR, RCC_CR_HSIRDY) == 0) {
-            // if ((HAL_GetTick() - tickstart) > HSI_STARTUP_TIMEOUT) {
-            //     return HAL_TIMEOUT;
-            // }
+            if ((HAL_GetTick() - tickstart) > HSI_STARTUP_TIMEOUT) {
+                return HAL_TIMEOUT;
+            }
         }
         
         // Adjust HSI calibration if specified
@@ -117,11 +117,11 @@ HAL_Status HAL_RCC_OscConfig(RCC_OscInit *RCC_OscInitStruct) {
         CLEAR_BIT(RCC->CR, RCC_CR_HSION);
         
         // Wait for HSI to be disabled
-        // tickstart = HAL_GetTick();
+        tickstart = HAL_GetTick();
         while (READ_BIT(RCC->CR, RCC_CR_HSIRDY) != 0) {
-            // if ((HAL_GetTick() - tickstart) > HSI_STARTUP_TIMEOUT) {
-            //     return HAL_TIMEOUT;
-            // }
+            if ((HAL_GetTick() - tickstart) > HSI_STARTUP_TIMEOUT) {
+                return HAL_TIMEOUT;
+            }
         }
     }
     
@@ -145,11 +145,11 @@ HAL_Status HAL_RCC_PLLConfig(RCC_PLLInit *RCC_PLLInitStruct) {
         CLEAR_BIT(RCC->CR, RCC_CR_PLL1ON);
         
         // Wait until PLL is disabled
-        // tickstart = HAL_GetTick();
+        tickstart = HAL_GetTick();
         while (READ_BIT(RCC->CR, RCC_CR_PLL1RDY) != 0) {
-            // if ((HAL_GetTick() - tickstart) > PLL_TIMEOUT) {
-            //     return HAL_TIMEOUT;
-            // }
+            if ((HAL_GetTick() - tickstart) > PLL_TIMEOUT) {
+                return HAL_TIMEOUT;
+            }
         }
         
         // Configure PLL source
@@ -182,22 +182,22 @@ HAL_Status HAL_RCC_PLLConfig(RCC_PLLInit *RCC_PLLInitStruct) {
         SET_BIT(RCC->CR, RCC_CR_PLL1ON);
         
         // Wait for PLL to be ready
-        // tickstart = HAL_GetTick();
+        tickstart = HAL_GetTick();
         while (READ_BIT(RCC->CR, RCC_CR_PLL1RDY) == 0) {
-            // if ((HAL_GetTick() - tickstart) > PLL_TIMEOUT) {
-            //     return HAL_TIMEOUT;
-            // }
+            if ((HAL_GetTick() - tickstart) > PLL_TIMEOUT) {
+                return HAL_TIMEOUT;
+            }
         }
     } else {
         // Disable PLL
         CLEAR_BIT(RCC->CR, RCC_CR_PLL1ON);
         
         // Wait until PLL is disabled
-        // tickstart = HAL_GetTick();
+        tickstart = HAL_GetTick();
         while (READ_BIT(RCC->CR, RCC_CR_PLL1RDY) != 0) {
-            // if ((HAL_GetTick() - tickstart) > PLL_TIMEOUT) {
-            //     return HAL_TIMEOUT;
-            // }
+            if ((HAL_GetTick() - tickstart) > PLL_TIMEOUT) {
+                return HAL_TIMEOUT;
+            }
         }
     }
     
@@ -215,9 +215,7 @@ HAL_Status HAL_RCC_ClockConfig(RCC_ClkInit *RCC_ClkInitStruct, uint32_t FLatency
         return HAL_ERROR;
     }
     
-    // Configure flash latency BEFORE increasing frequency
-    // (or AFTER decreasing frequency)
-    // For simplicity, we'll set it before
+    // Configure flash latency before increasing frequency
     MODIFY_REG(FLASH->ACR, FLASH_ACR_LATENCY, FLatency);
 
     // Check that flash latency was set correctly
