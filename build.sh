@@ -12,6 +12,8 @@ NC='\033[0m' # No Color
 BUILD_DIR=".build"
 BUILD_TYPE="Debug"
 
+STM32_PROG="/Applications/STMicroelectronics/STM32Cube/STM32CubeProgrammer/STM32CubeProgrammer.app/Contents/MacOs/bin/STM32_Programmer_CLI"
+
 # Print colored message
 print_msg() {
     echo -e "${GREEN}[BUILD]${NC} $1"
@@ -42,6 +44,7 @@ Commands:
     erase           Erase target flash memory
     gdb             Start GDB server
     size            Show memory usage
+    info            Show microcontroller info
     release         Build in release mode
     help            Show this help message
 
@@ -134,8 +137,22 @@ gdb_server() {
 show_size() {
     if [ -f "${BUILD_DIR}/Application/stm_rtos.elf" ]; then
         print_info "Memory usage:"
-        arm-none-eabi-size ${BUILD_DIR}/Application/stm_rtos.elf
+        ./scripts/print_size.sh ${BUILD_DIR}/Application/stm_rtos.elf
+        #arm-none-eabi-size ${BUILD_DIR}/Application/stm_rtos.elf
     fi
+}
+
+# Show STM32 Info 
+show_info() {
+    print_info "Querying connected STM32 microcontroller..."
+    ${STM32_PROG} -c port=SWD || {
+        print_error "Failed to connect to STM32"
+        print_info "Check that:"
+        echo "  - ST-Link is connected"
+        echo "  - Board is powered"
+        echo "  - SWD connections are correct"
+        return 1
+    }
 }
 
 # Build in release mode
@@ -195,6 +212,9 @@ case ${COMMAND} in
         ;;
     size)
         show_size
+        ;;
+    info)
+        show_info
         ;;
     release)
         build_release ${JOBS}

@@ -2,14 +2,16 @@
 set(APP_SOURCES
     # Main entry point
     main.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/adc.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/exti.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/led_driver.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/system.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/syscalls.c
-    # ${CMAKE_CURRENT_SOURCE_DIR}/src/sysmem.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/systick.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/timer.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/uart_driver.c
+    # ${CMAKE_CURRENT_SOURCE_DIR}/src/adc.c
+    # ${CMAKE_CURRENT_SOURCE_DIR}/src/exti.c
+    # ${CMAKE_CURRENT_SOURCE_DIR}/src/led_driver.c
+    # ${CMAKE_CURRENT_SOURCE_DIR}/src/syscalls.c
+    # # ${CMAKE_CURRENT_SOURCE_DIR}/src/sysmem.c
+    # ${CMAKE_CURRENT_SOURCE_DIR}/src/systick.c
+    # ${CMAKE_CURRENT_SOURCE_DIR}/src/timer.c
+    # ${CMAKE_CURRENT_SOURCE_DIR}/src/uart_driver.c
 )
 
 set(SYSTEM_SOURCES
@@ -30,10 +32,10 @@ target_include_directories(${PROJECT_NAME}.elf PRIVATE
 )
 
 # Link libraries
-# target_link_libraries(${PROJECT_NAME}.elf PRIVATE
-#     hal
-#     rtos
-# )
+target_link_libraries(${PROJECT_NAME}.elf PRIVATE
+    HAL
+    # rtos
+)
 
 # Linker script
 set(LINKER_SCRIPT ${CMAKE_SOURCE_DIR}/linker_script.ld)
@@ -49,7 +51,6 @@ target_link_options(${PROJECT_NAME}.elf PRIVATE
 add_custom_command(TARGET ${PROJECT_NAME}.elf POST_BUILD
     COMMAND ${CMAKE_OBJCOPY} -O ihex $<TARGET_FILE:${PROJECT_NAME}.elf> ${PROJECT_NAME}.hex
     COMMAND ${CMAKE_OBJCOPY} -O binary $<TARGET_FILE:${PROJECT_NAME}.elf> ${PROJECT_NAME}.bin
-    COMMAND ${CMAKE_SIZE} $<TARGET_FILE:${PROJECT_NAME}.elf>
     COMMENT "Building ${PROJECT_NAME}.hex and ${PROJECT_NAME}.bin"
 )
 
