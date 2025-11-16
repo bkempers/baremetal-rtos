@@ -42,8 +42,18 @@ void SystemClock_Config()
 void Error_Handler()
 {
     __disable_irq();
+
+    // Re-enable ONLY SysTick
+    __set_BASEPRI(0);  // Clear BASEPRI
+    NVIC_EnableIRQ(SysTick_IRQn);  // Won't work - SysTick is different
+    
+    // Better: Don't use NVIC, just enable SysTick directly
+    SysTick->CTRL |= SysTick_CTRL_TICKINT_Msk;  // Enable SysTick interrupt
+    __enable_irq();  // Re-enable interrupts globally
+
     while(1)
     {
         //flash red LED
+        Led_Error();
     }
 }

@@ -3,6 +3,7 @@
 
 #include "stm32h7rs_hal.h"
 #include "stm32h7rs_hal_rcc.h"
+#include "led.h"
 
 void SystemClock_Config(void);
 void Error_Handler(void);

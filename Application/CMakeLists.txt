@@ -4,6 +4,7 @@ set(APP_SOURCES
     main.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/system.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/syscalls.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/led.c
     # ${CMAKE_CURRENT_SOURCE_DIR}/src/adc.c
     # ${CMAKE_CURRENT_SOURCE_DIR}/src/exti.c
     # ${CMAKE_CURRENT_SOURCE_DIR}/src/led_driver.c
@@ -58,7 +59,7 @@ add_custom_command(TARGET ${PROJECT_NAME}.elf POST_BUILD
 set(STM32_PROG "/Applications/STMicroelectronics/STM32Cube/STM32CubeProgrammer/STM32CubeProgrammer.app/Contents/MacOs/bin/STM32_Programmer_CLI")
 
 add_custom_target(flash
-    COMMAND ${STM32_PROG} -c port=SWD -w ${PROJECT_NAME}.elf -v -rst -q
+    COMMAND ${STM32_PROG} -c port=SWD freq=4000 mode=UR -w ${PROJECT_NAME}.elf -v -rst -q
     DEPENDS ${PROJECT_NAME}.elf
     COMMENT "Flashing ${PROJECT_NAME}.elf"
 )
