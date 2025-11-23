@@ -1,7 +1,7 @@
 #include "stm32h7rs_hal.h"
 #include "stm32h7rs_hal_rcc.h"
-#include <system.h>
 #include <led.h>
+#include <system.h>
 
 int main(void)
 {
@@ -10,10 +10,10 @@ int main(void)
     SysTick_Config(64000000);
     __enable_irq();
 
-	Led_Init();
-	while(1) {
-	    Led_Cycle();
-	}
-    
+    Led_Init();
+    while (1) {
+        Led_Cycle();
+    }
+
     return 1;
 }

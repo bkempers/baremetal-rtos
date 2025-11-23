@@ -18,5 +18,4 @@ void systickInterrupt();
 void SysTick_Handler();
 void systick_callback();
 
-
 #endif /* SYSTICK_H_ */

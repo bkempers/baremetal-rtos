@@ -20,12 +20,12 @@ void led_toggle(int led_num);
 
 static uint16_t compute_uart_bd(uint32_t PeriphClk, uint32_t BaudRate)
 {
-	return ((PeriphClk + (BaudRate/2U)) / BaudRate);
+    return ((PeriphClk + (BaudRate / 2U)) / BaudRate);
 }
 
 static void uart_set_baudrate(USART_TypeDef *USARTx, uint32_t PeriphClk, uint32_t BaudRate)
 {
-	USARTx->BRR = compute_uart_bd(PeriphClk, BaudRate);
+    USARTx->BRR = compute_uart_bd(PeriphClk, BaudRate);
 }
 
 void usart_rxtx_init(void);
@@ -45,6 +45,5 @@ void uart_interrupt_driver();
 void gpdma1_usart3_init(uint32_t src, uint32_t dst, uint32_t len);
 void GPDMA1_CH0_IRQHandler(void);
 void usart_dma_driver();
-
 
 #endif /* UART_DRIVER_H_ */

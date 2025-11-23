@@ -1,0 +1,36 @@
+---
+BasedOnStyle: LLVM
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+ColumnLimit: 150
+
+# Brace styles
+BreakBeforeBraces: Linux
+BraceWrapping:
+  AfterEnum: false
+  AfterStruct: false
+
+# Keep things multi-line
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortBlocksOnASingleLine: Never
+AllowShortEnumsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+
+# Pointer and spacing
+PointerAlignment: Right
+SpaceAfterCStyleCast: true
+
+# Alignment
+AlignConsecutiveAssignments: Consecutive
+AlignConsecutiveDeclarations: Consecutive
+AlignConsecutiveMacros: Consecutive
+
+# Macro backslash alignment
+AlignEscapedNewlines: Right
+IndentPPDirectives: None
+
+# Empty lines
+KeepEmptyLinesAtTheStartOfBlocks: false
+MaxEmptyLinesToKeep: 1

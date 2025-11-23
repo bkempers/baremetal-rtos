@@ -45,6 +45,7 @@ Commands:
     gdb             Start GDB server
     size            Show memory usage
     info            Show microcontroller info
+    format          Auto-format code
     release         Build in release mode
     help            Show this help message
 
@@ -155,6 +156,26 @@ show_info() {
     }
 }
 
+# Clangd format
+format_code() {
+    # Format all C/C++ files under specific top-level directories
+    MODULES=(
+        "HAL"
+        "Application"
+        "RTOS"
+    )
+
+    for module in "${MODULES[@]}"; do
+        if [ -d "$module" ]; then
+            find "$module" -type f \( -name "*.c" -o -name "*.h" \) \
+                -exec clang-format -i {} \;
+        fi
+    done
+
+    echo "Formatting complete!"
+
+}
+
 # Build in release mode
 build_release() {
     BUILD_TYPE="Release"
@@ -215,6 +236,9 @@ case ${COMMAND} in
         ;;
     info)
         show_info
+        ;;
+    format)
+        format_code
         ;;
     release)
         build_release ${JOBS}

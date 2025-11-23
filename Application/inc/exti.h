@@ -14,5 +14,4 @@ void pc13_exti_init(void);
 void EXTI13_IRQHandler(void);
 void gpio_interrupt_driver(void);
 
-
 #endif /* EXTI_H_ */
