@@ -50,6 +50,7 @@ typedef enum {
     USART_FLAG_TC    = USART_ISR_TC,
     USART_FLAG_TXE   = USART_ISR_TXE,
     USART_FLAG_TXFNF = USART_ISR_TXE_TXFNF,
+    USART_FLAG_RXFNE = USART_ISR_RXNE_RXFNE,
     USART_FLAG_LBDF  = USART_ISR_LBDF,
     USART_FLAG_CTSIF = USART_ISR_CTSIF,
     USART_FLAG_RTOF  = USART_ISR_RTOF,
@@ -105,10 +106,45 @@ typedef enum {
 #define USART_WORDLENGTH_8B (0x00000000U)
 #define USART_WORDLENGTH_9B (USART_CR1_M0)
 
+#define USART_STOPBITS_1       0x00000000U
+#define USART_STOPBITS_2       USART_CR2_STOP_1
+
+#define USART_MODE_TX          USART_CR1_TE
+#define USART_MODE_RX          USART_CR1_RE
+#define USART_MODE_TX_RX       (USART_CR1_TE | USART_CR1_RE)
+
+#define USART_POLARITY_LOW     0x00000000U
+#define USART_POLARITY_HIGH    USART_CR2_CPOL
+
+#define USART_PHASE_1EDGE      0x00000000U
+#define USART_PHASE_2EDGE      USART_CR2_CPHA
+
+#define USART_LASTBIT_DISABLE  0x00000000U
+#define USART_LASTBIT_ENABLE   USART_CR2_LBCL
+
+#define USART_PRESCALER_DIV1   0x00000000U
+#define USART_PRESCALER_DIV2   0x00000001U
+#define USART_PRESCALER_DIV4   0x00000002U
+#define USART_PRESCALER_DIV6   0x00000003U
+#define USART_PRESCALER_DIV8   0x00000004U
+#define USART_PRESCALER_DIV10  0x00000005U
+#define USART_PRESCALER_DIV12  0x00000006U
+#define USART_PRESCALER_DIV16  0x00000007U
+#define USART_PRESCALER_DIV32  0x00000008U
+#define USART_PRESCALER_DIV64  0x00000009U
+#define USART_PRESCALER_DIV128 0x0000000AU
+#define USART_PRESCALER_DIV256 0x0000000BU
+
 #define USART_SLAVEMODE_DISABLE 0x00000000U
 #define USART_SLAVEMODE_ENABLE  USART_CR2_SLVEN
 
 #define USART_ERROR_NONE 0x00u
+#define USART_ERROR_PE   0x01U
+#define USART_ERROR_NE   0x02U
+#define USART_ERROR_FE   0x04U
+#define USART_ERROR_ORE  0x08U
+#define USART_ERROR_UDR  0x20U
+#define USART_ERROR_RTO  0x80U
 
 typedef struct __USART_Handle {
     USART_TypeDef    *Instance;
@@ -117,7 +153,7 @@ typedef struct __USART_Handle {
     uint16_t          txSize;
     volatile uint16_t txCount;
     uint16_t          txProcessData;
-    const uint8_t    *rxPointer;
+    uint8_t          *rxPointer;
     uint16_t          rxSize;
     volatile uint16_t rxCount;
     uint16_t          rxProcessData;
@@ -130,6 +166,15 @@ typedef struct __USART_Handle {
     volatile HAL_USART_State State;
     volatile uint16_t        errorCode;
 
+    void (*txHalfCpltCallback)(struct __USART_Handle *handle);  /*!< USART Tx Half Complete Callback        */
+    void (*txCpltCallback)(struct __USART_Handle *handle);      /*!< USART Tx Complete Callback             */
+    void (*rxHalfCpltCallback)(struct __USART_Handle *handle);  /*!< USART Rx Half Complete Callback        */
+    void (*rxCpltCallback)(struct __USART_Handle *handle);      /*!< USART Rx Complete Callback             */
+    void (*txrxCpltCallback)(struct __USART_Handle *handle);    /*!< USART Tx Rx Complete Callback          */
+    void (*errorCallback)(struct __USART_Handle *handle);       /*!< USART Error Callback                   */
+    void (*abortCpltCallback)(struct __USART_Handle *handle);   /*!< USART Abort Complete Callback          */
+    void (*rxFifoFullCallback)(struct __USART_Handle *handle);  /*!< USART Rx Fifo Full Callback            */
+    void (*txFifoEmptyCallback)(struct __USART_Handle *handle); /*!< USART Tx Fifo Empty Callback           */
 } USART_Handle;
 
 HAL_Status HAL_USART_Init(USART_Handle *handle);
@@ -141,6 +186,18 @@ HAL_Status HAL_USART_Transmit(USART_Handle *handle, const uint8_t *txPointer, ui
 HAL_Status HAL_USART_Receiver_IT(USART_Handle *handle, uint8_t *rxPointer, uint16_t size);
 HAL_Status HAL_USART_Transmit_IT(USART_Handle *handle, const uint8_t *txPointer, uint16_t size);
 HAL_Status HAL_USART_Receive_Transmit_IT(USART_Handle *handle, uint8_t *rxPointer, const uint8_t *txPointer, uint16_t size);
+
+HAL_Status HAL_USART_Abort(USART_Handle *handle);
+HAL_Status HAL_USART_Abort_IT(USART_Handle *handle);
+
+void HAL_USART_IRQHandler(USART_Handle *handle);
+void HAL_USART_txHalfCpltCallback(USART_Handle *handle);
+void HAL_USART_txCpltCallback(USART_Handle *handle);
+void HAL_USART_rxCpltCallback(USART_Handle *handle);
+void HAL_USART_rxHalfCpltCallback(USART_Handle *handle);
+void HAL_USART_txrxCpltCallback(USART_Handle *handle);
+void HAL_USART_errorCallback(USART_Handle *handle);
+void HAL_USART_abortCpltCallback(USART_Handle *handle);
 
 // void USART1_IRHandler(void);
 // void USART2_IRHandler(void);

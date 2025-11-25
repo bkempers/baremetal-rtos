@@ -5,6 +5,7 @@ set(APP_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/system.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/syscalls.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/led.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/console.c
     # ${CMAKE_CURRENT_SOURCE_DIR}/src/adc.c
     # ${CMAKE_CURRENT_SOURCE_DIR}/src/exti.c
     # ${CMAKE_CURRENT_SOURCE_DIR}/src/led_driver.c

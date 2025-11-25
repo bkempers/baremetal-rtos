@@ -5,6 +5,11 @@
 #include "stm32h7rs_hal.h"
 #include "stm32h7rs_hal_rcc.h"
 
+typedef enum {
+    SYS_ERROR = 0x0,
+    SYS_OK = 0x1,
+} SYS_Status;
+
 void SystemClock_Config(void);
 void Error_Handler(void);
 

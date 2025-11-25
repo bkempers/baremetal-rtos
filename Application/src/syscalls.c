@@ -5,6 +5,11 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+// locals
+#include "stm32h7rs_hal_usart.h"
+
+extern USART_Handle usart3;
+
 // Defined by linker script
 extern uint32_t _heap_start; // Start of heap
 extern uint32_t _heap_end;   // End of heap (or stack start)
@@ -45,8 +50,14 @@ int _write(int file, char *ptr, int len)
     // For now, just return success
     // We'll implement UART output later
     (void) file;
-    (void) ptr;
 
+    // HAL_USART_Transmit_IT(&usart3, (uint8_t*)ptr, len);
+    // HAL_USART_Transmit(&usart3, (uint8_t*)ptr, len, 1000);
+
+    for (int i = 0; i < len; i++) {
+        while (!(USART3->ISR & (1U << 7)));
+        USART3->TDR = (ptr[i] & 0xFF);
+    }
     // Return number of bytes "written"
     return len;
 }
@@ -60,6 +71,9 @@ int _read(int file, char *ptr, int len)
     (void) file;
     (void) ptr;
     (void) len;
+
+    // HAL_USART_Receiver_IT(&usart3, (uint8_t*)ptr, len);
+    // HAL_USART_Receive(&usart3, (uint8_t*)ptr, len, 1000);
 
     // No input available in bare metal
     return 0;

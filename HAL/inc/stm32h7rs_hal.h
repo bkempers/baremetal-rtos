@@ -11,7 +11,7 @@
 #if defined(__GNUC__)
 #define __weak       __attribute__((weak))
 #define __packed     __attribute__((__packed__))
-#define __aligned(x) __attribute__((aligned(x)))
+//#define __aligned(x) __attribute__((aligned(x)))
 #elif defined(__ICCARM__) // IAR compiler
 #define __weak       __weak
 #define __packed     __packed
@@ -26,6 +26,8 @@
 #define __packed
 #define __aligned(x)
 #endif
+
+#define UNUSED(X) (void)X      /* To avoid gcc/g++ warnings */
 
 typedef enum {
     HAL_ERROR   = 0x0,
@@ -48,6 +50,9 @@ typedef enum {
     HAL_TICK_FREQ_1KHZ    = 1U,
     HAL_TICK_FREQ_DEFAULT = HAL_TICK_FREQ_1KHZ
 } HAL_TickFreq;
+
+#define HAL_IS_BIT_SET(REG, BIT) (((REG) & (BIT)) == (BIT))
+#define HAL_IS_BIT_CLR(REG, BIT) (((REG) & (BIT)) == 0U)
 
 extern __IO uint32_t uwTick;
 extern uint32_t      uwTickPrio;

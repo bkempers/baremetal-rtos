@@ -34,16 +34,14 @@ static inline uint32_t usart_get_clock_source(USART_TypeDef *USARTx);
 static uint32_t        usart_get_clock_freq(USART_ClockSource clock_source);
 static HAL_Status      usart_set_config(USART_Handle *handle);
 static HAL_Status      usart_check_idle(USART_Handle *handle);
-static HAL_Status      usart_check_flag(USART_Handle *handle, uint32_t flag, FlagStatus status, uint32_t tickstart, uint32_t timeout);
+static HAL_Status      usart_check_flag(USART_Handle *handle, USART_Flag flag, FlagStatus status, uint32_t tickstart, uint32_t timeout);
+static void            usart_end_transfer(USART_Handle *handle);
+static void            usart_end_transmit_it(USART_Handle *handle);
 
-static void USART_TxISR_16FIFO(USART_Handle *handle);
 static void USART_TxISR_8FIFO(USART_Handle *handle);
-static void USART_TxISR_16(USART_Handle *handle);
 static void USART_TxISR_8(USART_Handle *handle);
 
-static void USART_RxISR_16FIFO(USART_Handle *handle);
 static void USART_RxISR_8FIFO(USART_Handle *handle);
-static void USART_RxISR_16(USART_Handle *handle);
 static void USART_RxISR_8(USART_Handle *handle);
 
 static void usart_enable_interrupt(USART_Handle *handle, uint32_t interrupt);
@@ -89,10 +87,9 @@ HAL_Status HAL_USART_DeInit(USART_Handle *handle)
 
 HAL_Status HAL_USART_Receive(USART_Handle *handle, uint8_t *rxPointer, uint16_t size, uint32_t timeout)
 {
-    uint8_t  *rx_data_8b;
-    uint16_t *rx_data_16b;
-    uint16_t  uhMask;
-    uint32_t  tickstart;
+    uint8_t *rx_data_8b;
+    uint16_t uhMask;
+    uint32_t tickstart;
 
     if (handle->State == HAL_USART_STATE_READY) {
         if ((rxPointer == NULL) || (size == 0U)) {
@@ -109,32 +106,17 @@ HAL_Status HAL_USART_Receive(USART_Handle *handle, uint8_t *rxPointer, uint16_t 
         handle->rxCount = size;
 
         /* Computation of USART mask to apply to RDR register */
-        // USART_MASK_COMPUTATION(husart);
-        // uhMask = husart->Mask;
-
-        /* In case of 9bits/No Parity transfer, pRxData needs to be handled as a
-         * uint16_t pointer */
-        if ((handle->Init.WordLen == USART_WORDLENGTH_9B) && (handle->Init.Parity == USART_PARITY_NONE)) {
-            rx_data_8b  = NULL;
-            rx_data_16b = (uint16_t *) rxPointer;
-        } else {
-            rx_data_8b  = (uint8_t *) rxPointer;
-            rx_data_16b = NULL;
-        }
+        // USART_MASK_COMPUTATION(handle);
+        // uhMask = handle->Mask;
+        rx_data_8b = (uint8_t *) rxPointer;
 
         /* as long as data have to be received */
         while (handle->rxCount > 0U) {
             if (usart_check_flag(handle, USART_FLAG_RXNE, RESET, tickstart, timeout) != HAL_OK) {
                 return HAL_TIMEOUT;
             }
-
-            if (rx_data_8b == NULL) {
-                *rx_data_16b = (uint16_t) (handle->Instance->RDR & uhMask);
-                rx_data_16b++;
-            } else {
-                *rx_data_8b = (uint8_t) (handle->Instance->RDR & (uint8_t) (uhMask & 0xFFU));
-                rx_data_8b++;
-            }
+            *rx_data_8b = (uint8_t) (handle->Instance->RDR & (uint8_t) (uhMask & 0xFFU));
+            rx_data_8b++;
 
             handle->rxCount--;
         }
@@ -147,11 +129,10 @@ HAL_Status HAL_USART_Receive(USART_Handle *handle, uint8_t *rxPointer, uint16_t 
     }
 }
 
-uint32_t HAL_USART_Transmit(USART_Handle *handle, const uint8_t *txPointer, uint16_t size, uint32_t timeout)
+HAL_Status HAL_USART_Transmit(USART_Handle *handle, const uint8_t *txPointer, uint16_t size, uint32_t timeout)
 {
-    const uint8_t  *tx_data_8b;
-    const uint16_t *tx_data_16b;
-    uint32_t        tickstart;
+    const uint8_t *tx_data_8b;
+    uint32_t       tickstart;
 
     if (handle->State == HAL_USART_STATE_READY) {
         if ((txPointer == NULL) || (size == 0U)) {
@@ -167,28 +148,15 @@ uint32_t HAL_USART_Transmit(USART_Handle *handle, const uint8_t *txPointer, uint
         handle->txSize  = size;
         handle->txCount = size;
 
-        /* In case of 9bits/No Parity transfer, pTxData needs to be handled as a
-         * uint16_t pointer */
-        if ((handle->Init.WordLen == USART_WORDLENGTH_9B) && (handle->Init.Parity == USART_PARITY_NONE)) {
-            tx_data_8b  = NULL;
-            tx_data_16b = (const uint16_t *) txPointer;
-        } else {
-            tx_data_8b  = txPointer;
-            tx_data_16b = NULL;
-        }
+        tx_data_8b = txPointer;
 
         /* Check the remaining data to be sent */
         while (handle->txCount > 0U) {
             if (usart_check_flag(handle, USART_FLAG_TXE, RESET, tickstart, timeout) != HAL_OK) {
                 return HAL_TIMEOUT;
             }
-            if (tx_data_8b == NULL) {
-                handle->Instance->TDR = (uint16_t) (*tx_data_16b & 0x01FFU);
-                tx_data_16b++;
-            } else {
-                handle->Instance->TDR = (uint8_t) (*tx_data_8b & 0xFFU);
-                tx_data_8b++;
-            }
+            handle->Instance->TDR = (uint8_t) (*tx_data_8b & 0xFFU);
+            tx_data_8b++;
 
             handle->txCount--;
         }
@@ -234,7 +202,7 @@ HAL_Status HAL_USART_Receiver_IT(USART_Handle *handle, uint8_t *rxPointer, uint1
         if ((handle->fifoMode == USART_CR1_FIFOEN) && (size >= handle->rxProcessData)) {
             /* Set the Rx ISR function pointer according to the data word length */
             if ((handle->Init.WordLen == USART_WORDLENGTH_9B) && (handle->Init.Parity == USART_PARITY_NONE)) {
-                handle->RxISR = USART_RxISR_16FIFO;
+                // TODO: not supported
             } else {
                 handle->RxISR = USART_RxISR_8FIFO;
             }
@@ -247,7 +215,7 @@ HAL_Status HAL_USART_Receiver_IT(USART_Handle *handle, uint8_t *rxPointer, uint1
         } else {
             /* Set the Rx ISR function pointer according to the data word length */
             if ((handle->Init.WordLen == USART_WORDLENGTH_9B) && (handle->Init.Parity == USART_PARITY_NONE)) {
-                handle->RxISR = USART_RxISR_16;
+                // TODO: not supported
             } else {
                 handle->RxISR = USART_RxISR_8;
             }
@@ -291,7 +259,7 @@ HAL_Status HAL_USART_Transmit_IT(USART_Handle *handle, const uint8_t *txPointer,
         if (handle->fifoMode == USART_CR1_FIFOEN) {
             /* Set the Tx ISR function pointer according to the data word length */
             if ((handle->Init.WordLen == USART_WORDLENGTH_9B) && (handle->Init.Parity == USART_PARITY_NONE)) {
-                handle->TxISR = USART_TxISR_16FIFO;
+                // TODO: not supported
             } else {
                 handle->TxISR = USART_TxISR_8FIFO;
             }
@@ -301,7 +269,7 @@ HAL_Status HAL_USART_Transmit_IT(USART_Handle *handle, const uint8_t *txPointer,
         } else {
             /* Set the Tx ISR function pointer according to the data word length */
             if ((handle->Init.WordLen == USART_WORDLENGTH_9B) && (handle->Init.Parity == USART_PARITY_NONE)) {
-                handle->TxISR = USART_TxISR_16;
+                // TODO: not supported
             } else {
                 handle->TxISR = USART_TxISR_8;
             }
@@ -316,28 +284,407 @@ HAL_Status HAL_USART_Transmit_IT(USART_Handle *handle, const uint8_t *txPointer,
     }
 }
 
-HAL_Status HAL_USART_Receive_Transmit_IT(USART_Handle *handle, uint8_t *rxPointer, const uint8_t *txPointer, uint16_t size) {}
-
-void USART3_IRHandler(void) {}
-
-static void USART_RxISR_8(USART_Handle *handle) 
+HAL_Status HAL_USART_Receive_Transmit_IT(USART_Handle *handle, uint8_t *rxPointer, const uint8_t *txPointer, uint16_t size)
 {
+    if (handle->State == HAL_USART_STATE_READY) {
+        if ((txPointer == NULL) || (rxPointer == NULL) || (size == 0U)) {
+            return HAL_ERROR;
+        }
 
+        handle->rxPointer = rxPointer;
+        handle->rxSize    = size;
+        handle->rxCount   = size;
+        handle->txPointer = txPointer;
+        handle->txSize    = size;
+        handle->txCount   = size;
+
+        handle->errorCode = USART_ERROR_NONE;
+        handle->State     = HAL_USART_STATE_BUSY_TX_RX;
+
+        /* Configure TxRx interrupt processing */
+        if ((handle->fifoMode == USART_CR1_FIFOEN) && (size >= handle->rxProcessData)) {
+            /* Set the Rx ISR function pointer according to the data word length */
+            if ((handle->Init.WordLen == USART_WORDLENGTH_9B) && (handle->Init.Parity == USART_PARITY_NONE)) {
+                // TODO: not supported
+            } else {
+                handle->TxISR = USART_TxISR_8FIFO;
+                handle->RxISR = USART_RxISR_8FIFO;
+            }
+
+            /* Enable the USART Error Interrupt: (Frame error, noise error, overrun error) */
+            SET_BIT(handle->Instance->CR3, USART_CR3_EIE);
+
+            if (handle->Init.Parity != USART_PARITY_NONE) {
+                /* Enable the USART Parity Error interrupt  */
+                SET_BIT(handle->Instance->CR1, USART_CR1_PEIE);
+            }
+
+            /* Enable the TX and  RX FIFO Threshold interrupts */
+            SET_BIT(handle->Instance->CR3, (USART_CR3_TXFTIE | USART_CR3_RXFTIE));
+        } else {
+            if ((handle->Init.WordLen == USART_WORDLENGTH_9B) && (handle->Init.Parity == USART_PARITY_NONE)) {
+                // TODO: not supported
+            } else {
+                handle->TxISR = USART_TxISR_8;
+                handle->RxISR = USART_RxISR_8;
+            }
+
+            /* Enable the USART Error Interrupt: (Frame error, noise error, overrun error) */
+            SET_BIT(handle->Instance->CR3, USART_CR3_EIE);
+
+            /* Enable the USART Parity Error and USART Data Register not empty Interrupts */
+            if (handle->Init.Parity != USART_PARITY_NONE) {
+                SET_BIT(handle->Instance->CR1, USART_CR1_PEIE | USART_CR1_RXNEIE_RXFNEIE);
+            } else {
+                SET_BIT(handle->Instance->CR1, USART_CR1_RXNEIE_RXFNEIE);
+            }
+
+            /* Enable the USART Transmit Data Register Empty Interrupt */
+            SET_BIT(handle->Instance->CR1, USART_CR1_TXEIE_TXFNFIE);
+        }
+
+        return HAL_OK;
+    } else {
+        return HAL_BUSY;
+    }
 }
 
-static void USART_RxISR_16(USART_Handle *handle)
+HAL_Status HAL_USART_Abort(USART_Handle *handle)
 {
+    // TODO: add in later
+    return HAL_OK;
+}
 
+HAL_Status HAL_USART_Abort_IT(USART_Handle *handle)
+{
+    // TODO: add in later
+    return HAL_OK;
+}
+
+void HAL_USART_IRQHandler(USART_Handle *handle)
+{
+    uint32_t isrflags = READ_REG(handle->Instance->ISR);
+    uint32_t cr1its   = READ_REG(handle->Instance->CR1);
+    uint32_t cr3its   = READ_REG(handle->Instance->CR3);
+
+    uint32_t errorflags;
+    uint32_t errorcode;
+
+    /* If no error occurs */
+    errorflags = (isrflags & (uint32_t) (USART_ISR_PE | USART_ISR_FE | USART_ISR_ORE | USART_ISR_NE | USART_ISR_RTOF | USART_ISR_UDR));
+    if (errorflags == 0U) {
+        /* USART in mode Receiver ---------------------------------------------------*/
+        if (((isrflags & USART_ISR_RXNE_RXFNE) != 0U) && (((cr1its & USART_CR1_RXNEIE_RXFNEIE) != 0U) || ((cr3its & USART_CR3_RXFTIE) != 0U))) {
+            if (handle->RxISR != NULL) {
+                handle->RxISR(handle);
+            }
+            return;
+        }
+    }
+
+    /* If some errors occur */
+    if ((errorflags != 0U) &&
+        (((cr3its & (USART_CR3_RXFTIE | USART_CR3_EIE)) != 0U) || ((cr1its & (USART_CR1_RXNEIE_RXFNEIE | USART_CR1_PEIE)) != 0U))) {
+        /* USART parity error interrupt occurred -------------------------------------*/
+        if (((isrflags & USART_ISR_PE) != 0U) && ((cr1its & USART_CR1_PEIE) != 0U)) {
+            handle->Instance->ICR = (uint32_t) USART_CLEAR_PEF;
+            handle->errorCode |= USART_ERROR_PE;
+        }
+
+        /* USART frame error interrupt occurred --------------------------------------*/
+        if (((isrflags & USART_ISR_FE) != 0U) && ((cr3its & USART_CR3_EIE) != 0U)) {
+            handle->Instance->ICR = (uint32_t) USART_CLEAR_FEF;
+            handle->errorCode |= USART_ERROR_FE;
+        }
+
+        /* USART noise error interrupt occurred --------------------------------------*/
+        if (((isrflags & USART_ISR_NE) != 0U) && ((cr3its & USART_CR3_EIE) != 0U)) {
+            handle->Instance->ICR = (uint32_t) USART_CLEAR_NEF;
+            handle->errorCode |= USART_ERROR_NE;
+        }
+
+        /* USART Over-Run interrupt occurred -----------------------------------------*/
+        if (((isrflags & USART_ISR_ORE) != 0U) &&
+            (((cr1its & USART_CR1_RXNEIE_RXFNEIE) != 0U) || ((cr3its & (USART_CR3_RXFTIE | USART_CR3_EIE)) != 0U))) {
+            handle->Instance->ICR = (uint32_t) USART_CLEAR_OREF;
+            handle->errorCode |= USART_ERROR_ORE;
+        }
+
+        /* USART Receiver Timeout interrupt occurred ---------------------------------*/
+        if (((isrflags & USART_ISR_RTOF) != 0U) && ((cr1its & USART_CR1_RTOIE) != 0U)) {
+            handle->Instance->ICR = (uint32_t) USART_CLEAR_RTOF;
+            handle->errorCode |= USART_ERROR_RTO;
+        }
+
+        /* USART SPI slave underrun error interrupt occurred -------------------------*/
+        if (((isrflags & USART_ISR_UDR) != 0U) && ((cr3its & USART_CR3_EIE) != 0U)) {
+            /* Ignore SPI slave underrun errors when reception is going on */
+            if (handle->State == HAL_USART_STATE_BUSY_RX) {
+                handle->Instance->ICR = USART_CLEAR_UDRF;
+                return;
+            } else {
+                handle->Instance->ICR = USART_CLEAR_UDRF;
+                handle->errorCode |= USART_ERROR_UDR;
+            }
+        }
+
+        /* Call USART Error Call back function if need be --------------------------*/
+        if (handle->errorCode != USART_ERROR_NONE) {
+            /* USART in mode Receiver ---------------------------------------------------*/
+            if (((isrflags & USART_ISR_RXNE_RXFNE) != 0U) && (((cr1its & USART_CR1_RXNEIE_RXFNEIE) != 0U) || ((cr3its & USART_CR3_RXFTIE) != 0U))) {
+                if (handle->RxISR != NULL) {
+                    handle->RxISR(handle);
+                }
+            }
+
+            /* If Overrun error occurs, or if any error occurs in DMA mode reception,
+               consider error as blocking */
+            errorcode = handle->errorCode & USART_ERROR_ORE;
+            if ((HAL_IS_BIT_SET(handle->Instance->CR3, USART_CR3_DMAR)) || (errorcode != 0U)) {
+                /* Blocking error : transfer is aborted
+                   Set the USART state ready to be able to start again the process,
+                   Disable Interrupts, and disable DMA requests, if ongoing */
+                usart_end_transfer(handle);
+
+                /* Call registered Error Callback */
+                handle->errorCallback(handle);
+            } else {
+                /* Non Blocking error : transfer could go on.
+                   Error is notified to user through user error callback */
+                /* Call registered Error Callback */
+                handle->errorCallback(handle);
+                handle->errorCode = USART_ERROR_NONE;
+            }
+        }
+        return;
+
+    } /* End if some error occurs */
+
+    /* USART in mode Transmitter ------------------------------------------------*/
+    if (((isrflags & USART_ISR_TXE_TXFNF) != 0U) && (((cr1its & USART_CR1_TXEIE_TXFNFIE) != 0U) || ((cr3its & USART_CR3_TXFTIE) != 0U))) {
+        if (handle->TxISR != NULL) {
+            handle->TxISR(handle);
+        }
+        return;
+    }
+
+    /* USART in mode Transmitter (transmission end) -----------------------------*/
+    if (((isrflags & USART_ISR_TC) != 0U) && ((cr1its & USART_CR1_TCIE) != 0U)) {
+        usart_end_transmit_it(handle);
+        return;
+    }
+
+    /* USART TX Fifo Empty occurred ----------------------------------------------*/
+    if (((isrflags & USART_ISR_TXFE) != 0U) && ((cr1its & USART_CR1_TXFEIE) != 0U)) {
+        /* Call registered Tx Fifo Empty Callback */
+        handle->txFifoEmptyCallback(handle);
+        return;
+    }
+
+    /* USART RX Fifo Full occurred ----------------------------------------------*/
+    if (((isrflags & USART_ISR_RXFF) != 0U) && ((cr1its & USART_CR1_RXFFIE) != 0U)) {
+        /* Call registered Rx Fifo Full Callback */
+        handle->rxFifoFullCallback(handle);
+        return;
+    }
+}
+
+__weak void HAL_USART_txHalfCpltCallback(USART_Handle *handle)
+{
+    UNUSED(handle);
+}
+
+__weak void HAL_USART_txCpltCallback(USART_Handle *handle)
+{
+    UNUSED(handle);
+}
+
+__weak void HAL_USART_rxCpltCallback(USART_Handle *handle)
+{
+    UNUSED(handle);
+}
+
+__weak void HAL_USART_rxHalfCpltCallback(USART_Handle *handle)
+{
+    UNUSED(handle);
+}
+
+__weak void HAL_USART_txrxCpltCallback(USART_Handle *handle)
+{
+    UNUSED(handle);
+}
+
+__weak void HAL_USART_errorCallback(USART_Handle *handle)
+{
+    UNUSED(handle);
+}
+
+__weak void HAL_USART_abortCpltCallback(USART_Handle *handle)
+{
+    UNUSED(handle);
+}
+
+static void usart_end_transfer(USART_Handle *handle)
+{
+    /* Disable TXEIE, TCIE, RXNE, RXFT, TXFT, PE and ERR (Frame error, noise error, overrun error) interrupts */
+    CLEAR_BIT(handle->Instance->CR1, (USART_CR1_RXNEIE_RXFNEIE | USART_CR1_PEIE | USART_CR1_TXEIE_TXFNFIE | USART_CR1_TCIE));
+    CLEAR_BIT(handle->Instance->CR3, (USART_CR3_EIE | USART_CR3_RXFTIE | USART_CR3_TXFTIE));
+
+    /* At end of process, restore husart->State to Ready */
+    handle->State = HAL_USART_STATE_READY;
+}
+
+static void usart_end_transmit_it(USART_Handle *handle)
+{
+    /* Disable the USART Transmit Complete Interrupt */
+    usart_disable_interrupt(handle, USART_IT_TC);
+
+    /* Disable the USART Error Interrupt: (Frame error, noise error, overrun error) */
+    usart_disable_interrupt(handle, USART_IT_ERR);
+
+    /* Clear TxISR function pointer */
+    handle->TxISR = NULL;
+
+    if (handle->State == HAL_USART_STATE_BUSY_TX) {
+        /* Clear overrun flag and discard the received data */
+        handle->Instance->ICR = USART_CLEAR_OREF;
+        handle->Instance->RQR |= (uint16_t) USART_RQR_RXFRQ;
+
+        /* Tx process is completed, restore husart->State to Ready */
+        handle->State = HAL_USART_STATE_READY;
+
+        /* Call registered Tx Complete Callback */
+        handle->txCpltCallback(handle);
+    } else if (handle->rxCount == 0U) {
+        /* TxRx process is completed, restore husart->State to Ready */
+        handle->State = HAL_USART_STATE_READY;
+
+        /* Call registered Tx Rx Complete Callback */
+        handle->txrxCpltCallback(handle);
+    } else {
+        /* Nothing to do */
+    }
+}
+
+static void USART_RxISR_8(USART_Handle *handle)
+{
+    const HAL_USART_State state = handle->State;
+    uint16_t              txdatacount;
+    uint16_t              uhMask = handle->mask;
+    uint32_t              txftie;
+
+    if ((state == HAL_USART_STATE_BUSY_RX) || (state == HAL_USART_STATE_BUSY_TX_RX)) {
+        *handle->rxPointer = (uint8_t) (handle->Instance->RDR & (uint8_t) uhMask);
+        handle->rxPointer++;
+        handle->rxCount--;
+
+        if (handle->rxCount == 0U) {
+            /* Disable the USART Parity Error Interrupt and RXNE interrupt*/
+            CLEAR_BIT(handle->Instance->CR1, (USART_CR1_RXNEIE_RXFNEIE | USART_CR1_PEIE));
+
+            /* Disable the USART Error Interrupt: (Frame error, noise error, overrun error) */
+            CLEAR_BIT(handle->Instance->CR3, USART_CR3_EIE);
+
+            /* Clear RxISR function pointer */
+            handle->RxISR = NULL;
+
+            /* txftie and txdatacount are temporary variables for MISRAC2012-Rule-13.5 */
+            txftie      = READ_BIT(handle->Instance->CR3, USART_CR3_TXFTIE);
+            txdatacount = handle->txCount;
+
+            if (state == HAL_USART_STATE_BUSY_RX) {
+                /* Call register Rx Complete Callback */
+                handle->rxCpltCallback(handle);
+            } else if ((READ_BIT(handle->Instance->CR1, USART_CR1_TCIE) != USART_CR1_TCIE) && (txftie != USART_CR3_TXFTIE) && (txdatacount == 0U)) {
+                /* TxRx process is completed, restore handle->State to Ready */
+                handle->State = HAL_USART_STATE_READY;
+
+                /* Call registered Tx Rx Complete Callback */
+                handle->txrxCpltCallback(handle);
+            } else {
+                /* Nothing to do */
+            }
+        } else {
+            /* Nothing to do */
+        }
+    }
 }
 
 static void USART_RxISR_8FIFO(USART_Handle *handle)
 {
+    HAL_USART_State state = handle->State;
+    uint16_t        txdatacount;
+    uint16_t        rxdatacount;
+    uint16_t        uhMask = handle->mask;
+    uint16_t        nb_rx_data;
+    uint32_t        txftie;
 
-}
+    /* Check that a Rx process is ongoing */
+    if ((state == HAL_USART_STATE_BUSY_RX) || (state == HAL_USART_STATE_BUSY_TX_RX)) {
+        for (nb_rx_data = handle->rxProcessData; nb_rx_data > 0U; nb_rx_data--) {
+            if (((handle->Instance->ISR & (USART_FLAG_RXFNE)) == (USART_FLAG_RXFNE)) == SET) {
+                *handle->rxPointer = (uint8_t) (handle->Instance->RDR & (uint8_t) (uhMask & 0xFFU));
+                handle->rxPointer++;
+                handle->rxCount--;
 
-static void USART_RxISR_16FIFO(USART_Handle *handle)
-{
+                if (handle->txCount == 0U) {
+                    /* Disable the USART Parity Error Interrupt */
+                    CLEAR_BIT(handle->Instance->CR1, USART_CR1_PEIE);
 
+                    /* Disable the USART Error Interrupt: (Frame error, noise error, overrun error)
+                       and RX FIFO Threshold interrupt */
+                    CLEAR_BIT(handle->Instance->CR3, (USART_CR3_EIE | USART_CR3_RXFTIE));
+
+                    /* Clear RxISR function pointer */
+                    handle->RxISR = NULL;
+
+                    /* txftie and txdatacount are temporary variables for MISRAC2012-Rule-13.5 */
+                    txftie      = READ_BIT(handle->Instance->CR3, USART_CR3_TXFTIE);
+                    txdatacount = handle->txCount;
+
+                    if (state == HAL_USART_STATE_BUSY_RX) {
+                        /* Rx process is completed, restore handle->State to Ready */
+                        handle->State = HAL_USART_STATE_READY;
+                        state         = HAL_USART_STATE_READY;
+
+                        /* Call registered Rx Complete Callback */
+                        handle->rxCpltCallback(handle);
+                    } else if ((READ_BIT(handle->Instance->CR1, USART_CR1_TCIE) != USART_CR1_TCIE) && (txftie != USART_CR3_TXFTIE) &&
+                               (txdatacount == 0U)) {
+                        /* TxRx process is completed, restore handle->State to Ready */
+                        handle->State = HAL_USART_STATE_READY;
+                        state         = HAL_USART_STATE_READY;
+
+                        /* Call registered Tx Rx Complete Callback */
+                        handle->txrxCpltCallback(handle);
+                    } else {
+                        /* Nothing to do */
+                    }
+                } else {
+                    /* Nothing to do */
+                }
+            }
+        }
+
+        /* When remaining number of bytes to receive is less than the RX FIFO
+        threshold, next incoming frames are processed as if FIFO mode was
+        disabled (i.e. one interrupt per received frame).
+        */
+        rxdatacount = handle->rxCount;
+        if (((rxdatacount != 0U)) && (rxdatacount < handle->rxProcessData)) {
+            /* Disable the USART RXFT interrupt*/
+            CLEAR_BIT(handle->Instance->CR3, USART_CR3_RXFTIE);
+
+            /* Update the RxISR function pointer */
+            handle->RxISR = USART_RxISR_8;
+
+            /* Enable the USART Data Register Not Empty interrupt */
+            SET_BIT(handle->Instance->CR1, USART_CR1_RXNEIE_RXFNEIE);
+        }
+    } else {
+        /* Clear RXNE interrupt flag */
+        handle->Instance->RDR |= (uint16_t) USART_RQR_RXFRQ;
+    }
 }
 
 static void USART_TxISR_8(USART_Handle *handle)
@@ -356,56 +703,6 @@ static void USART_TxISR_8(USART_Handle *handle)
             handle->Instance->TDR = (uint8_t) (*handle->txPointer & (uint8_t) 0xFF);
             handle->txPointer++;
             handle->txCount--;
-        }
-    }
-}
-
-static void USART_TxISR_16(USART_Handle *handle)
-{
-    const HAL_USART_State state = handle->State;
-    const uint16_t       *tmp;
-
-    if ((state == HAL_USART_STATE_BUSY_TX) || (state == HAL_USART_STATE_BUSY_TX_RX)) {
-        if (handle->txCount == 0U) {
-            /* Disable the USART Transmit data register empty interrupt */
-            usart_disable_interrupt(handle, USART_IT_TXE);
-
-            /* Enable the USART Transmit Complete Interrupt */
-            usart_enable_interrupt(handle, USART_IT_TC);
-        } else {
-            tmp                   = (const uint16_t *) handle->txPointer;
-            handle->Instance->TDR = (uint16_t) (*tmp & 0x01FFU);
-            handle->txPointer += 2U;
-            handle->txCount--;
-        }
-    }
-}
-
-static void USART_TxISR_16FIFO(USART_Handle *handle)
-{
-    const HAL_USART_State state = handle->State;
-    const uint16_t       *tmp;
-    uint16_t              nb_tx_data;
-
-    /* Check that a Tx process is ongoing */
-    if ((state == HAL_USART_STATE_BUSY_TX) || (state == HAL_USART_STATE_BUSY_TX_RX)) {
-        for (nb_tx_data = handle->txProcessData; nb_tx_data > 0U; nb_tx_data--) {
-            if (handle->txCount == 0U) {
-                /* Disable the TX FIFO threshold interrupt */
-                usart_disable_interrupt(handle, USART_IT_TXFT);
-
-                /* Enable the USART Transmit Complete Interrupt */
-                usart_enable_interrupt(handle, USART_IT_TC);
-
-                break; /* force exit loop */
-            } else if (((handle->Instance->ISR & (USART_FLAG_TXFNF)) == USART_FLAG_TXFNF) == SET) {
-                tmp                   = (const uint16_t *) handle->txPointer;
-                handle->Instance->TDR = (uint16_t) (*tmp & 0x01FFU);
-                handle->txPointer += 2U;
-                handle->txCount--;
-            } else {
-                /* Nothing to do */
-            }
         }
     }
 }
@@ -581,73 +878,4 @@ static HAL_Status usart_set_baudrate(USART_TypeDef *USARTx, uint32_t BaudRate)
 
     USARTx->BRR = ((clock_freq + (BaudRate / 2U)) / BaudRate);
     return HAL_OK;
-}
-
-/*
- * UART INTERRUPT
- */
-
-void usart_rxtx_interrupt_init(void)
-{
-    /* configure GPIO pin */
-    // enable clock access
-    RCC->AHB4ENR |= GPIODEN;
-
-    /* TX Enable for USART3 GPIO */
-    // set PD8 to alternate function
-    GPIOD->MODER &= ~(1U << 16); // set bit 16 to 0
-    GPIOD->MODER |= (1U << 17);  // set bit 17 to 1
-
-    // set PD8 to alternate function type UART_TX AF7 (0111)
-    GPIOD->AFR[1] &= ~(0xF << 0); // Clear bits first
-    GPIOD->AFR[1] |= (7U << 0);   // Set AF7
-
-    /* RX Enable for USART3 GPIO */
-    // set PD9 to alternate function
-    GPIOD->MODER &= ~(1U << 18); // set bit 18 to 0
-    GPIOD->MODER |= (1U << 19);  // set bit 19 to 1
-
-    // set PD9 to alternate function type UART_RX AF7 (0111)
-    GPIOD->AFR[1] &= ~(0xF << 4); // Clear bits first
-    GPIOD->AFR[1] |= (7U << 4);   // Set AF7
-
-    /* configure UART module */
-    // enable clock access to UART3
-    RCC->APB1ENR1 |= USART3EN;
-
-    // configure baudrate
-    uart_set_baudrate(USART3, ABP1_CLK, UART_BAUDRATE);
-
-    // configure transfer direction
-    USART3->CR1 = CR1_FIFOEN_DISABLE | CR1_TE | CR1_RE;
-
-    /* enable RXNE interrupt */
-    USART3->CR1 |= CR1_RXNEIE;
-
-    /* ENABLE USART3 interrupt in NVIC */
-    __NVIC_EnableIRQ(USART3_IRQn);
-
-    // enable uart module
-    USART3->CR1 |= CR1_UE;
-
-    for (int i = 0; i < 1000000; i++) {
-    }
-}
-
-static void uart_callback(void)
-{
-    char key = USART3->RDR;
-
-    if (key == '1') {
-        led_toggle(1);
-    } else {
-        led_toggle(2);
-    }
-}
-
-void USART3_IRQHandler(void)
-{
-    if (USART3->ISR & ISR_ALT_RXNE) {
-        uart_callback();
-    }
 }
