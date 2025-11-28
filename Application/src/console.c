@@ -1,10 +1,11 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "console.h"
-#include "led.h"
 #include "stm32h7rs_hal.h"
 #include "stm32h7rs_hal_usart.h"
+#include "system.h"
+#include "console.h"
+#include "led.h"
 
 // global variables
 USART_Handle usart3;
@@ -79,9 +80,6 @@ SYS_Status Console_Init()
     __NVIC_SetPriority(USART3_IRQn, 5);
     __NVIC_EnableIRQ(USART3_IRQn);
 
-    // **START RECEIVING IMMEDIATELY - One byte at a time**
-    // HAL_USART_Receiver_IT(&usart3, &rx_byte, 1);
-
     return SYS_OK;
 }
 
@@ -90,20 +88,14 @@ void Console_Process(void)
     // Check for complete command
     if (cmd_ready) {
         // Process command
-        if (strcmp(cmd_buffer, "help") == 0) {
-            printf("Commands:\r\n");
-            printf("  help - Show this help\r\n");
-            printf("  led  - Toggle LED\r\n");
-            printf("  info - System info\r\n");
+        if (strcmp(cmd_buffer, "system") == 0) {
+            printf("STM32H7RS Serial Console\r\n");
         }
-        else if (strcmp(cmd_buffer, "led") == 0) {
-            Led_Toggle(2);
-            printf("LED toggled\r\n");
+        else if (strcmp(cmd_buffer, "ver") == 0) {
+            printf("VERSION: %u.%u.%u.\r\n", MAJOR_VER, MINOR_VER, PATCH_VER);
         }
-        else if (strcmp(cmd_buffer, "info") == 0) {
-            printf("System: STM32H7RS\r\n");
-            printf("Clock: %u Hz\r\n", SystemCoreClock);
-            printf("Uptime: %.3f sec\r\n", HAL_GetTick() / 1000.0f);
+        else if (strcmp(cmd_buffer, "clock") == 0) {
+            printf("CLOCK: %u Hz\r\n", SystemCoreClock);
         }
         else if (strlen(cmd_buffer) > 0) {
             printf("Unknown: %s\r\n", cmd_buffer);
@@ -131,7 +123,7 @@ void Console_Process(void)
 
 void USART3_IRHandler(void)
 {
-        // ========================================================================
+    // ========================================================================
     // HANDLE RX OURSELVES (outside HAL state machine)
     // ========================================================================
     if ((USART3->ISR & USART_ISR_RXNE) && (USART3->CR1 & USART_CR1_RXNEIE)) {
@@ -174,10 +166,6 @@ void USART3_IRHandler(void)
                 cmd_buffer[cmd_index++] = received;
             }
         }
-        
-        // We handled RX - don't let HAL see RXNE
-        // This prevents HAL from getting confused about state
-        //return;
     }
 
     HAL_USART_IRQHandler(&usart3);
@@ -194,38 +182,6 @@ void HAL_USART_rxCpltCallback(USART_Handle *handle)
     Led_Toggle(2);
 
     if (handle->Instance == USART3) {
-        Led_Toggle(2);
-        char received = (char)(USART3->RDR & 0xFF);
-        
-        // Echo character back
-        // HAL_USART_Transmit_IT(&usart3, &rx_byte, 1);
-        
-        // Process character
-        if (received == '\r' || received == '\n') {
-            if (cmd_index > 0) {
-                cmd_buffer[cmd_index] = '\0';
-                cmd_ready = true;
-                
-                // Send newline
-                // uint8_t newline[] = "\r\n";
-                // HAL_USART_Transmit(&usart3, newline, 2, 100);
-            }
-        }
-        else if (received == '\b' || received == 127) {
-            if (cmd_index > 0) {
-                cmd_index--;
-                // Erase on terminal
-                // uint8_t erase[] = "\b \b";
-                // HAL_USART_Transmit(&usart3, erase, 3, 100);
-            }
-        }
-        else if (received >= 32 && received <= 126) {
-            if (cmd_index < CMD_BUFFER_SIZE - 1) {
-                cmd_buffer[cmd_index++] = received;
-            }
-        }
-
-        HAL_USART_Receiver_IT(&usart3, &rx_byte, 1);
     }
 }
 
