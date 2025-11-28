@@ -70,7 +70,21 @@ add_custom_target(erase
     COMMENT "Erasing flash"
 )
 
+set(STLINK_GDBSERVER "/Applications/STM32CubeIDE.app/Contents/Eclipse/plugins/com.st.stm32cube.ide.mcu.externaltools.stlink-gdb-server.macos64_2.2.200.202505060755/tools/bin/ST-LINK_gdbserver")
+set(STM32_PROG_DIR "/Applications/STMicroelectronics/STM32Cube/STM32CubeProgrammer/STM32CubeProgrammer.app/Contents/MacOs/bin")
+
 add_custom_target(gdb-server
-    COMMAND ${STM32_PROG} -c port=SWD -gdb 3333
-    COMMENT "Starting GDB server on port 3333"
+    COMMAND ${STLINK_GDBSERVER} 
+        -p 61234
+        -d
+        -s
+        -cp ${STM32_PROG_DIR}
+        -m 1
+        --halt
+    COMMENT "Starting ST-LINK GDB server on port 61234"
 )
+
+# add_custom_target(gdb-server
+#     COMMAND ${STM32_PROG} -c port=SWD mode=UR -startserver -gdb 61234
+#     COMMENT "Starting GDB server on port 61234"
+# )

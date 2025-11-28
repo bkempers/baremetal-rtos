@@ -10,6 +10,10 @@
 
 #include "system.h"
 
+#define CMD_BUFFER_SIZE 128
+#define TRACE_SIZE 8
+
 SYS_Status Console_Init();
+void Console_Process();
 
 #endif // CONSOLE_H

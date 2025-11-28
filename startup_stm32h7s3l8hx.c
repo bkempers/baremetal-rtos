@@ -58,7 +58,7 @@ VECTOR_HANDLER(EXTI14_IRHandler)
 VECTOR_HANDLER(EXTI15_IRHandler)
 VECTOR_HANDLER(RTC_IRHandler)
 VECTOR_HANDLER(SAES_IRHandler)
-VECTOR_HANDLER(AES_IRHandler)
+VECTOR_HANDLER(CRYP_IRHandler)
 VECTOR_HANDLER(PKA_IRHandler)
 VECTOR_HANDLER(HASH_IRHandler)
 VECTOR_HANDLER(RNG_IRHandler)
@@ -234,7 +234,7 @@ uint32_t g_pfnVectors[ISR_VECTOR_SIZE_WORDS] __attribute__((section(".isr_vector
   (uint32_t)&EXTI15_IRHandler,
   (uint32_t)&RTC_IRHandler,
   (uint32_t)&SAES_IRHandler,
-  (uint32_t)&AES_IRHandler,
+  (uint32_t)&CRYP_IRHandler,
   (uint32_t)&PKA_IRHandler,
   (uint32_t)&HASH_IRHandler,
   (uint32_t)&RNG_IRHandler,
@@ -246,6 +246,7 @@ uint32_t g_pfnVectors[ISR_VECTOR_SIZE_WORDS] __attribute__((section(".isr_vector
   (uint32_t)&GPDMA1_CH4_IRHandler,
   (uint32_t)&GPDMA1_CH5_IRHandler,
   (uint32_t)&GPDMA1_CH6_IRHandler,
+  (uint32_t)&GPDMA1_CH7_IRHandler,
   (uint32_t)&TIM1_BRK_IRHandler,
   (uint32_t)&TIM1_UP_IRHandler,
   (uint32_t)&TIM1_TRG_COM_IRHandler,

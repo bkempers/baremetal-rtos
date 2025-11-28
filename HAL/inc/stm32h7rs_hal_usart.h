@@ -78,9 +78,11 @@ typedef enum {
 #define USART_CLEAR_TXFECF USART_ICR_TXFECF /*!< TXFIFO Empty Clear Flag             */
 #define USART_CLEAR_RTOF   USART_ICR_RTOCF  /*!< USART receiver timeout clear flag  */
 
-#define USART_CR_MASK 0x0F00 // Extract CR number
-#define USART_CR_POS  8      // Shift to get CR number
-#define USART_IT_MASK 0x001F // Extract bit position (0-31)
+#define USART_IT_MASK                             0x001FU     /*!< USART interruptions flags mask */
+#define USART_CR_MASK                             0x00E0U     /*!< USART control register mask */
+#define USART_CR_POS                              5U          /*!< USART control register position */
+#define USART_ISR_MASK                            0x1F00U     /*!< USART ISR register mask         */
+#define USART_ISR_POS                             8U          /*!< USART ISR register position     */
 
 #define USART_IT_PE    0x0028U /*!< USART parity error interruption                 */
 #define USART_IT_TXE   0x0727U /*!< USART transmit data register empty interruption */
@@ -190,6 +192,9 @@ HAL_Status HAL_USART_Receive_Transmit_IT(USART_Handle *handle, uint8_t *rxPointe
 HAL_Status HAL_USART_Abort(USART_Handle *handle);
 HAL_Status HAL_USART_Abort_IT(USART_Handle *handle);
 
+void usart_enable_interrupt(USART_Handle *handle, uint32_t interrupt);
+void usart_disable_interrupt(USART_Handle *handle, uint32_t interrupt);
+
 void HAL_USART_IRQHandler(USART_Handle *handle);
 void HAL_USART_txHalfCpltCallback(USART_Handle *handle);
 void HAL_USART_txCpltCallback(USART_Handle *handle);
@@ -201,7 +206,7 @@ void HAL_USART_abortCpltCallback(USART_Handle *handle);
 
 // void USART1_IRHandler(void);
 // void USART2_IRHandler(void);
-void USART3_IRHandler(void);
+// void USART3_IRHandler(void);
 // void UART4_IRHandler(void);
 // void UART5_IRHandler(void);
 // void UART6_IRHandler(void);

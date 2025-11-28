@@ -44,9 +44,6 @@ static void USART_TxISR_8(USART_Handle *handle);
 static void USART_RxISR_8FIFO(USART_Handle *handle);
 static void USART_RxISR_8(USART_Handle *handle);
 
-static void usart_enable_interrupt(USART_Handle *handle, uint32_t interrupt);
-static void usart_disable_interrupt(USART_Handle *handle, uint32_t interrupt);
-
 HAL_Status HAL_USART_Init(USART_Handle *handle)
 {
     if (handle == NULL) {
@@ -150,18 +147,17 @@ HAL_Status HAL_USART_Transmit(USART_Handle *handle, const uint8_t *txPointer, ui
 
         tx_data_8b = txPointer;
 
-        /* Check the remaining data to be sent */
         while (handle->txCount > 0U) {
-            if (usart_check_flag(handle, USART_FLAG_TXE, RESET, tickstart, timeout) != HAL_OK) {
+            if (usart_check_flag(handle, USART_FLAG_TXE, SET, tickstart, timeout) != HAL_OK) {
                 return HAL_TIMEOUT;
             }
             handle->Instance->TDR = (uint8_t) (*tx_data_8b & 0xFFU);
-            tx_data_8b++;
 
+            tx_data_8b++;
             handle->txCount--;
         }
 
-        if (usart_check_flag(handle, USART_FLAG_TC, RESET, tickstart, timeout) != HAL_OK) {
+        if (usart_check_flag(handle, USART_FLAG_TC, SET, tickstart, timeout) != HAL_OK) {
             return HAL_TIMEOUT;
         }
 
@@ -734,7 +730,7 @@ static void USART_TxISR_8FIFO(USART_Handle *handle)
     }
 }
 
-static void usart_enable_interrupt(USART_Handle *handle, uint32_t interrupt)
+void usart_enable_interrupt(USART_Handle *handle, uint32_t interrupt)
 {
     // Extract which control register (CR1=1, CR2=2, CR3=3)
     uint32_t cr_number = (interrupt & USART_CR_MASK) >> USART_CR_POS;
@@ -752,7 +748,7 @@ static void usart_enable_interrupt(USART_Handle *handle, uint32_t interrupt)
     }
 }
 
-static void usart_disable_interrupt(USART_Handle *handle, uint32_t interrupt)
+void usart_disable_interrupt(USART_Handle *handle, uint32_t interrupt)
 {
     // Extract which control register (CR1=1, CR2=2, CR3=3)
     uint32_t cr_number = (interrupt & USART_CR_MASK) >> USART_CR_POS;
@@ -773,7 +769,7 @@ static void usart_disable_interrupt(USART_Handle *handle, uint32_t interrupt)
 static HAL_Status usart_check_flag(USART_Handle *handle, USART_Flag flag, FlagStatus status, uint32_t tickstart, uint32_t timeout)
 {
     /* Wait until flag is set */
-    while ((((handle->Instance->ISR & flag) == flag) ? SET : RESET) == status) {
+    while ((((handle->Instance->ISR & flag) == flag) ? SET : RESET) != status) {
         /* Check for the Timeout */
         if (((HAL_GetTick() - tickstart) > timeout) || (timeout == 0U)) {
             handle->State = HAL_USART_STATE_READY;
@@ -791,14 +787,14 @@ static HAL_Status usart_check_idle(USART_Handle *handle)
 
     if ((handle->Instance->CR1 & USART_CR1_TE) == USART_CR1_TE) {
         /* Wait until TEACK flag is set */
-        if (usart_check_flag(handle, USART_FLAG_TEACK, RESET, tickstart, USART_TX_RX_TIMEOUT) != HAL_OK) {
+        if (usart_check_flag(handle, USART_FLAG_TEACK, SET, tickstart, USART_TX_RX_TIMEOUT) != HAL_OK) {
             return HAL_TIMEOUT;
         }
     }
 
     if ((handle->Instance->CR1 & USART_CR1_RE) == USART_CR1_RE) {
         /* Wait until REACK flag is set */
-        if (usart_check_flag(handle, USART_FLAG_REACK, RESET, tickstart, USART_TX_RX_TIMEOUT) != HAL_OK) {
+        if (usart_check_flag(handle, USART_FLAG_REACK, SET, tickstart, USART_TX_RX_TIMEOUT) != HAL_OK) {
             return HAL_TIMEOUT;
         }
     }
@@ -812,12 +808,15 @@ static HAL_Status usart_set_config(USART_Handle *handle)
     HAL_Status ret = HAL_OK;
 
     // USART CR1 CONFIGURATION
-    uint32_t cr1_config = (uint32_t) handle->Init.WordLen | handle->Init.Parity | handle->Init.Mode | USART_CR1_OVER8;
+    // uint32_t cr1_config = (uint32_t) handle->Init.WordLen | handle->Init.Parity | handle->Init.Mode | USART_CR1_OVER8;
+     uint32_t cr1_config = (uint32_t) handle->Init.WordLen | handle->Init.Parity | handle->Init.Mode;
     MODIFY_REG(handle->Instance->CR1, USART_CR1_CLEARMASK, cr1_config);
 
     // USART CR2 CONFIGURATION
-    uint32_t cr2_config = (uint32_t) USART_CR2_CLKEN;
-    cr2_config |= handle->Init.CLKLastBit | handle->Init.CLKPolarity | handle->Init.CLKPhase | handle->Init.StopBits;
+    // Fixed for async UART:
+    uint32_t cr2_config = (uint32_t) handle->Init.StopBits;
+    // uint32_t cr2_config = (uint32_t) USART_CR2_CLKEN;
+    // cr2_config |= handle->Init.CLKLastBit | handle->Init.CLKPolarity | handle->Init.CLKPhase | handle->Init.StopBits;
     MODIFY_REG(handle->Instance->CR2, USART_CR2_CLEARMASK, cr2_config);
 
     // USART PRESCALER CONFIGURATION
@@ -852,13 +851,27 @@ static uint32_t usart_get_clock_freq(USART_ClockSource clock_source)
         return HAL_RCC_GetPCLK1Freq();
     case USART_CLOCKSOURCE_PCLK2:
         return HAL_RCC_GetPCLK2Freq();
-    case USART_CLOCKSOURCE_HSI:
-        // Check if HSI divider is enabled (bit in RCC_CR)
-        if (RCC->CR & RCC_CR_HSIDIV) {
-            uint32_t divider = (RCC->CR & RCC_CR_HSIDIV_Msk) >> RCC_CR_HSIDIV_Pos;
-            return HSI_VALUE >> divider;
+    case USART_CLOCKSOURCE_HSI: {
+        // // Check if HSI divider is enabled (bit in RCC_CR)
+        // if (RCC->CR & RCC_CR_HSIDIV) {
+        //     uint32_t divider = (RCC->CR & RCC_CR_HSIDIV_Msk) >> RCC_CR_HSIDIV_Pos;
+        //     return HSI_VALUE >> divider;
+        // }
+        // return HSI_VALUE;
+        uint32_t hsi_freq = HSI_VALUE;  // Start with 64 MHz
+        
+        // Check if HSIDIV is enabled AND get divider value
+        if (RCC->CR & RCC_CR_HSIDIVF) {
+            // Get divider value from bits [4:3]
+            uint32_t hsidiv = (RCC->CR >> 3) & 0x3;
+            
+            // 00 = /1, 01 = /2, 10 = /4, 11 = /8
+            const uint8_t div_table[4] = {1, 2, 4, 8};
+            hsi_freq /= div_table[hsidiv];
         }
-        return HSI_VALUE;
+        
+        return hsi_freq;
+    }
     case USART_CLOCKSOURCE_CSI:
         return CSI_VALUE; // 4 MHz typically
     default:
@@ -877,5 +890,6 @@ static HAL_Status usart_set_baudrate(USART_TypeDef *USARTx, uint32_t BaudRate)
     }
 
     USARTx->BRR = ((clock_freq + (BaudRate / 2U)) / BaudRate);
+
     return HAL_OK;
 }

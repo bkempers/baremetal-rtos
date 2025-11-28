@@ -11,6 +11,12 @@ HAL_Status HAL_Init(void)
     if (HAL_InitTick(HAL_TICK_FREQ_DEFAULT) != HAL_OK) {
         ret = HAL_ERROR;
     }
+    
+    // Enable FPU
+    SCB->CPACR |= ((3UL << 10*2)|(3UL << 11*2));
+    __DSB();
+    __ISB();
+
     return ret;
 }
 
