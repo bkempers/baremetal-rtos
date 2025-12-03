@@ -29,6 +29,7 @@ add_executable(${PROJECT_NAME}.elf
 
 # Add application include directories
 target_include_directories(${PROJECT_NAME}.elf PRIVATE
+    ${CMAKE_BINARY_DIR}/Application/inc
     ${CMAKE_CURRENT_SOURCE_DIR}/inc      # src/inc/
     ${CMAKE_CURRENT_SOURCE_DIR}          # src/ (for main.h if needed)
 )
@@ -54,6 +55,16 @@ add_custom_command(TARGET ${PROJECT_NAME}.elf POST_BUILD
     COMMAND ${CMAKE_OBJCOPY} -O ihex $<TARGET_FILE:${PROJECT_NAME}.elf> ${PROJECT_NAME}.hex
     COMMAND ${CMAKE_OBJCOPY} -O binary $<TARGET_FILE:${PROJECT_NAME}.elf> ${PROJECT_NAME}.bin
     COMMENT "Building ${PROJECT_NAME}.hex and ${PROJECT_NAME}.bin"
+)
+
+# Make the executable depend on git_info updates
+add_dependencies(${PROJECT_NAME}.elf git_info_check)
+
+# Explicitly mark git_info.h as a dependency for sources that include it
+set_source_files_properties(
+    ${CMAKE_CURRENT_SOURCE_DIR}/main.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/console.c
+    PROPERTIES OBJECT_DEPENDS ${CMAKE_BINARY_DIR}/Application/inc/git_info.h
 )
 
 # Flash target
@@ -83,8 +94,3 @@ add_custom_target(gdb-server
         --halt
     COMMENT "Starting ST-LINK GDB server on port 61234"
 )
-
-# add_custom_target(gdb-server
-#     COMMAND ${STM32_PROG} -c port=SWD mode=UR -startserver -gdb 61234
-#     COMMENT "Starting GDB server on port 61234"
-# )

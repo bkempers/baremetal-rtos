@@ -105,6 +105,9 @@ void Console_Process(void)
         else if (strcmp(cmd_buffer, "clock") == 0) {
             INFO("CLOCK: %.1f MHz", (SystemCoreClock / 1e6));
         }
+        else if (strcmp(cmd_buffer, "git") == 0) {
+            INFO("GIT BRANCH: %s & HASH: %s", GIT_BRANCH, GIT_COMMIT_SHORT);
+        }
         else if (strlen(cmd_buffer) > 0) {
             INFO("Unknown: %s", cmd_buffer);
         }

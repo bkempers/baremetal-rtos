@@ -1,0 +1,12 @@
+// git_info.h - Auto-generated file, do not edit
+#ifndef GIT_INFO_H
+#define GIT_INFO_H
+
+#define GIT_BRANCH "@GIT_BRANCH@"
+#define GIT_COMMIT_HASH "@GIT_COMMIT_HASH@"
+#define GIT_COMMIT_SHORT "@GIT_COMMIT_SHORT@"
+#define GIT_COMMIT_DATE "@GIT_COMMIT_DATE@"
+#define GIT_DIRTY "@GIT_DIRTY@"
+#define BUILD_TIMESTAMP "@BUILD_TIMESTAMP@"
+
+#endif // GIT_INFO_H

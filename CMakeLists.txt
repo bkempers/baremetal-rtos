@@ -33,6 +33,86 @@ elseif(CMAKE_BUILD_TYPE MATCHES Release)
     add_compile_options(-O2)
 endif()
 
+# Git information configuration
+find_package(Git QUIET)
+
+if(GIT_FOUND)
+    execute_process(
+        COMMAND ${GIT_EXECUTABLE} rev-parse --abbrev-ref HEAD
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        OUTPUT_VARIABLE GIT_BRANCH
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+    )
+    
+    execute_process(
+        COMMAND ${GIT_EXECUTABLE} rev-parse HEAD
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        OUTPUT_VARIABLE GIT_COMMIT_HASH
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+    )
+    
+    execute_process(
+        COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        OUTPUT_VARIABLE GIT_COMMIT_SHORT
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+    )
+    
+    execute_process(
+        COMMAND ${GIT_EXECUTABLE} log -1 --format=%cd --date=iso-strict
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        OUTPUT_VARIABLE GIT_COMMIT_DATE
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+    )
+    
+    execute_process(
+        COMMAND ${GIT_EXECUTABLE} diff-index --quiet HEAD --
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        RESULT_VARIABLE GIT_DIRTY_RESULT
+        ERROR_QUIET
+    )
+    
+    if(GIT_DIRTY_RESULT EQUAL 0)
+        set(GIT_DIRTY "clean")
+    else()
+        set(GIT_DIRTY "dirty")
+    endif()
+else()
+    set(GIT_BRANCH "unknown")
+    set(GIT_COMMIT_HASH "unknown")
+    set(GIT_COMMIT_SHORT "unknown")
+    set(GIT_COMMIT_DATE "unknown")
+    set(GIT_DIRTY "unknown")
+endif()
+
+string(TIMESTAMP BUILD_TIMESTAMP "%Y-%m-%d %H:%M:%S" UTC)
+
+# Ensure the include directory exists
+file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/Application/inc)
+
+# Initial configuration of git_info.h
+configure_file(
+    ${CMAKE_SOURCE_DIR}/support/git_info.h.in
+    ${CMAKE_BINARY_DIR}/Application/inc/git_info.h
+    @ONLY
+)
+
+# Add custom target to update git info on every build
+add_custom_target(
+    git_info_check ALL
+    COMMAND ${CMAKE_COMMAND}
+        -DGIT_EXECUTABLE=${GIT_EXECUTABLE}
+        -DSOURCE_DIR=${CMAKE_SOURCE_DIR}
+        -DBINARY_DIR=${CMAKE_BINARY_DIR}
+        -P ${CMAKE_SOURCE_DIR}/cmake/update_git_info.cmake
+        BYPRODUCTS ${CMAKE_BINARY_DIR}/Application/inc/git_info.h
+    COMMENT "Updating git information..."
+)
+
 # Subdirectories
 # add_subdirectory(hal)
 # add_subdirectory(rtos)

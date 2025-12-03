@@ -8,6 +8,7 @@
 #include "stm32h7rs_hal_gpio.h"
 #include "stm32h7rs_hal_rcc.h"
 
+#include "git_info.h"
 #include "system.h"
 
 #define CMD_BUFFER_SIZE 128
