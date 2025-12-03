@@ -21,7 +21,7 @@ typedef struct {
 static trace_entry_t trace_buffer[TRACE_SIZE];
 static volatile uint16_t trace_index = 0;
 
-static uint8_t rx_byte;
+static void print_setup_information();
 
 SYS_Status Console_Init()
 {
@@ -80,7 +80,15 @@ SYS_Status Console_Init()
     __NVIC_SetPriority(USART3_IRQn, 5);
     __NVIC_EnableIRQ(USART3_IRQn);
 
+    //print_setup_information();
+
     return SYS_OK;
+}
+
+static void print_setup_information() 
+{
+    INFO("STM32H7RS Serial Console");
+    INFO("VERSION: %u.%u.%u", MAJOR_VER, MINOR_VER, PATCH_VER);
 }
 
 void Console_Process(void)
@@ -89,16 +97,16 @@ void Console_Process(void)
     if (cmd_ready) {
         // Process command
         if (strcmp(cmd_buffer, "system") == 0) {
-            printf("STM32H7RS Serial Console\r\n");
+            INFO("STM32H7RS Serial Console");
         }
         else if (strcmp(cmd_buffer, "ver") == 0) {
-            printf("VERSION: %u.%u.%u.\r\n", MAJOR_VER, MINOR_VER, PATCH_VER);
+            INFO("VERSION: %u.%u.%u", MAJOR_VER, MINOR_VER, PATCH_VER);
         }
         else if (strcmp(cmd_buffer, "clock") == 0) {
-            printf("CLOCK: %u Hz\r\n", SystemCoreClock);
+            INFO("CLOCK: %.1f MHz", (SystemCoreClock / 1e6));
         }
         else if (strlen(cmd_buffer) > 0) {
-            printf("Unknown: %s\r\n", cmd_buffer);
+            INFO("Unknown: %s", cmd_buffer);
         }
         
         // Reset for next command
