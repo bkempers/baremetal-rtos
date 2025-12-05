@@ -809,7 +809,7 @@ static HAL_Status usart_set_config(USART_Handle *handle)
 
     // USART CR1 CONFIGURATION
     // uint32_t cr1_config = (uint32_t) handle->Init.WordLen | handle->Init.Parity | handle->Init.Mode | USART_CR1_OVER8;
-     uint32_t cr1_config = (uint32_t) handle->Init.WordLen | handle->Init.Parity | handle->Init.Mode;
+    uint32_t cr1_config = (uint32_t) handle->Init.WordLen | handle->Init.Parity | handle->Init.Mode;
     MODIFY_REG(handle->Instance->CR1, USART_CR1_CLEARMASK, cr1_config);
 
     // USART CR2 CONFIGURATION
@@ -858,18 +858,18 @@ static uint32_t usart_get_clock_freq(USART_ClockSource clock_source)
         //     return HSI_VALUE >> divider;
         // }
         // return HSI_VALUE;
-        uint32_t hsi_freq = HSI_VALUE;  // Start with 64 MHz
-        
+        uint32_t hsi_freq = HSI_VALUE; // Start with 64 MHz
+
         // Check if HSIDIV is enabled AND get divider value
         if (RCC->CR & RCC_CR_HSIDIVF) {
             // Get divider value from bits [4:3]
             uint32_t hsidiv = (RCC->CR >> 3) & 0x3;
-            
+
             // 00 = /1, 01 = /2, 10 = /4, 11 = /8
             const uint8_t div_table[4] = {1, 2, 4, 8};
             hsi_freq /= div_table[hsidiv];
         }
-        
+
         return hsi_freq;
     }
     case USART_CLOCKSOURCE_CSI:

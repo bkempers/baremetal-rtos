@@ -52,9 +52,9 @@ int _write(int file, char *ptr, int len)
     (void) file;
     //(void) ptr;
     USART3->CR1 &= ~USART_CR1_RXNEIE;
-   
-    HAL_USART_Transmit_IT(&usart3, (uint8_t*)ptr, len);
-    //HAL_USART_Transmit(&usart3, (uint8_t*)ptr, len, 1000);
+
+    HAL_USART_Transmit_IT(&usart3, (uint8_t *) ptr, len);
+    // HAL_USART_Transmit(&usart3, (uint8_t*)ptr, len, 1000);
 
     USART3->CR1 |= USART_CR1_RXNEIE;
 
@@ -72,8 +72,8 @@ int _read(int file, char *ptr, int len)
     (void) ptr;
     (void) len;
 
-    HAL_USART_Receiver_IT(&usart3, (uint8_t*)ptr, len);
-    //HAL_USART_Receive(&usart3, (uint8_t*)ptr, len, 1000);
+    HAL_USART_Receiver_IT(&usart3, (uint8_t *) ptr, len);
+    // HAL_USART_Receive(&usart3, (uint8_t*)ptr, len, 1000);
 
     // No input available in bare metal
     return 0;

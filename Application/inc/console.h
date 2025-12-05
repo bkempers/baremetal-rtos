@@ -4,21 +4,21 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "stm32h7rs_hal_usart.h"
 #include "stm32h7rs_hal_gpio.h"
 #include "stm32h7rs_hal_rcc.h"
+#include "stm32h7rs_hal_usart.h"
 
 #include "git_info.h"
 #include "system.h"
 
 #define CMD_BUFFER_SIZE 128
-#define TRACE_SIZE 8
+#define TRACE_SIZE      8
 
 #define DEBUG(format, ...) printf("%s:%d %s() - " format "\r\n", __FILE__, __LINE__, __FUNCTION__, ##__VA_ARGS__)
-#define INFO(format, ...)  printf(format"\r\n", ##__VA_ARGS__)
+#define INFO(format, ...)  printf(format "\r\n", ##__VA_ARGS__)
 #define ERROR(format, ...) printf("%s:%d %s() - " format "\r\n", __FILE__, __LINE__, __FUNCTION__, ##__VA_ARGS__)
 
 SYS_Status Console_Init();
-void Console_Process();
+void       Console_Process();
 
 #endif // CONSOLE_H

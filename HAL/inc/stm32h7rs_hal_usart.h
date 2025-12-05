@@ -78,11 +78,11 @@ typedef enum {
 #define USART_CLEAR_TXFECF USART_ICR_TXFECF /*!< TXFIFO Empty Clear Flag             */
 #define USART_CLEAR_RTOF   USART_ICR_RTOCF  /*!< USART receiver timeout clear flag  */
 
-#define USART_IT_MASK                             0x001FU     /*!< USART interruptions flags mask */
-#define USART_CR_MASK                             0x00E0U     /*!< USART control register mask */
-#define USART_CR_POS                              5U          /*!< USART control register position */
-#define USART_ISR_MASK                            0x1F00U     /*!< USART ISR register mask         */
-#define USART_ISR_POS                             8U          /*!< USART ISR register position     */
+#define USART_IT_MASK  0x001FU /*!< USART interruptions flags mask */
+#define USART_CR_MASK  0x00E0U /*!< USART control register mask */
+#define USART_CR_POS   5U      /*!< USART control register position */
+#define USART_ISR_MASK 0x1F00U /*!< USART ISR register mask         */
+#define USART_ISR_POS  8U      /*!< USART ISR register position     */
 
 #define USART_IT_PE    0x0028U /*!< USART parity error interruption                 */
 #define USART_IT_TXE   0x0727U /*!< USART transmit data register empty interruption */
@@ -108,21 +108,21 @@ typedef enum {
 #define USART_WORDLENGTH_8B (0x00000000U)
 #define USART_WORDLENGTH_9B (USART_CR1_M0)
 
-#define USART_STOPBITS_1       0x00000000U
-#define USART_STOPBITS_2       USART_CR2_STOP_1
+#define USART_STOPBITS_1 0x00000000U
+#define USART_STOPBITS_2 USART_CR2_STOP_1
 
-#define USART_MODE_TX          USART_CR1_TE
-#define USART_MODE_RX          USART_CR1_RE
-#define USART_MODE_TX_RX       (USART_CR1_TE | USART_CR1_RE)
+#define USART_MODE_TX    USART_CR1_TE
+#define USART_MODE_RX    USART_CR1_RE
+#define USART_MODE_TX_RX (USART_CR1_TE | USART_CR1_RE)
 
-#define USART_POLARITY_LOW     0x00000000U
-#define USART_POLARITY_HIGH    USART_CR2_CPOL
+#define USART_POLARITY_LOW  0x00000000U
+#define USART_POLARITY_HIGH USART_CR2_CPOL
 
-#define USART_PHASE_1EDGE      0x00000000U
-#define USART_PHASE_2EDGE      USART_CR2_CPHA
+#define USART_PHASE_1EDGE 0x00000000U
+#define USART_PHASE_2EDGE USART_CR2_CPHA
 
-#define USART_LASTBIT_DISABLE  0x00000000U
-#define USART_LASTBIT_ENABLE   USART_CR2_LBCL
+#define USART_LASTBIT_DISABLE 0x00000000U
+#define USART_LASTBIT_ENABLE  USART_CR2_LBCL
 
 #define USART_PRESCALER_DIV1   0x00000000U
 #define USART_PRESCALER_DIV2   0x00000001U

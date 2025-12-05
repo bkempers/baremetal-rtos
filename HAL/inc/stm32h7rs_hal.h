@@ -9,9 +9,9 @@
 
 // Weak attribute for GCC
 #if defined(__GNUC__)
-#define __weak       __attribute__((weak))
-#define __packed     __attribute__((__packed__))
-//#define __aligned(x) __attribute__((aligned(x)))
+#define __weak   __attribute__((weak))
+#define __packed __attribute__((__packed__))
+// #define __aligned(x) __attribute__((aligned(x)))
 #elif defined(__ICCARM__) // IAR compiler
 #define __weak       __weak
 #define __packed     __packed
@@ -27,7 +27,7 @@
 #define __aligned(x)
 #endif
 
-#define UNUSED(X) (void)X      /* To avoid gcc/g++ warnings */
+#define UNUSED(X) (void) X /* To avoid gcc/g++ warnings */
 
 typedef enum {
     HAL_ERROR   = 0x0,

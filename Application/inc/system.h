@@ -16,7 +16,7 @@
 
 typedef enum {
     SYS_ERROR = 0x0,
-    SYS_OK = 0x1,
+    SYS_OK    = 0x1,
 } SYS_Status;
 
 void SystemClock_Config(void);

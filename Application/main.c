@@ -5,8 +5,8 @@
 #include "stm32h7rs_hal.h"
 #include "stm32h7rs_hal_rcc.h"
 #include "stm32h7rs_hal_usart.h"
-#include <led.h>
 #include <console.h>
+#include <led.h>
 #include <system.h>
 
 int main(void)
@@ -22,7 +22,7 @@ int main(void)
         Led_Cycle();
         HAL_DelayMS(500);
 
-        //printf("[%.3f] Hello, World!\r\n", HAL_GetTick()/1000.0f);
+        // printf("[%.3f] Hello, World!\r\n", HAL_GetTick()/1000.0f);
         Console_Process();
     }
 

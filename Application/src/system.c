@@ -26,18 +26,18 @@ void SystemClock_Config()
         Error_Handler();
     }
 
-     RCC_ClkInit clkinit_def;
-     clkinit_def.SYSCLKSource   = RCC_SYSCLKSOURCE_HSI;
-     clkinit_def.AHBCLKDivider  = RCC_HCLK_DIV1;
-     clkinit_def.APB1CLKDivider = RCC_APB1_DIV1;
-     clkinit_def.APB2CLKDivider = RCC_APB2_DIV1;
-     clkinit_def.APB4CLKDivider = RCC_APB4_DIV1;
-     clkinit_def.APB5CLKDivider = RCC_APB5_DIV1;
+    RCC_ClkInit clkinit_def;
+    clkinit_def.SYSCLKSource   = RCC_SYSCLKSOURCE_HSI;
+    clkinit_def.AHBCLKDivider  = RCC_HCLK_DIV1;
+    clkinit_def.APB1CLKDivider = RCC_APB1_DIV1;
+    clkinit_def.APB2CLKDivider = RCC_APB2_DIV1;
+    clkinit_def.APB4CLKDivider = RCC_APB4_DIV1;
+    clkinit_def.APB5CLKDivider = RCC_APB5_DIV1;
 
-     uint32_t flash_latency = FLASH_ACR_LATENCY_3;
-     if (HAL_RCC_ClockConfig(&clkinit_def, flash_latency) != HAL_OK) {
-         Error_Handler();
-     }
+    uint32_t flash_latency = FLASH_ACR_LATENCY_3;
+    if (HAL_RCC_ClockConfig(&clkinit_def, flash_latency) != HAL_OK) {
+        Error_Handler();
+    }
 }
 
 void Error_Handler()
