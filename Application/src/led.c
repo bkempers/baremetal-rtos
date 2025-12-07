@@ -55,15 +55,12 @@ void Led_Cycle(void)
 {
     Led_Toggle(1);
     HAL_DelayMS(50);
-    // for(int i =0; i<500000; i++) {}
 
     Led_Toggle(2);
     HAL_DelayMS(50);
-    // for(int i =0; i<500000; i++) {}
 
     Led_Toggle(3);
     HAL_DelayMS(50);
-    // for(int i =0; i<500000; i++) {}
 }
 
 void Led_Error(void)
