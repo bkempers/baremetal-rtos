@@ -185,7 +185,7 @@ void USART3_IRHandler(void)
 void HAL_USART_txCpltCallback(USART_Handle *handle)
 {
     // Transmission complete
-    Led_Toggle(1);
+    // Led_Toggle(1);
 }
 
 void HAL_USART_rxCpltCallback(USART_Handle *handle)

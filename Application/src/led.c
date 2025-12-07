@@ -1,3 +1,6 @@
+#include <stdio.h>
+
+#include "console.h"
 #include "led.h"
 #include "stm32h7rs_hal.h"
 #include "stm32h7rs_hal_gpio.h"
@@ -51,15 +54,15 @@ void Led_Toggle(uint8_t led_num)
 void Led_Cycle(void)
 {
     Led_Toggle(1);
-    HAL_DelayMS(100);
+    HAL_DelayMS(50);
     // for(int i =0; i<500000; i++) {}
 
     Led_Toggle(2);
-    HAL_DelayMS(100);
+    HAL_DelayMS(50);
     // for(int i =0; i<500000; i++) {}
 
     Led_Toggle(3);
-    HAL_DelayMS(100);
+    HAL_DelayMS(50);
     // for(int i =0; i<500000; i++) {}
 }
 

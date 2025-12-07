@@ -8,6 +8,7 @@
 #include <console.h>
 #include <led.h>
 #include <system.h>
+#include <task_scheduler.h>
 
 int main(void)
 {
@@ -18,10 +19,10 @@ int main(void)
     Led_Init();
     Console_Init();
 
-    while (1) {
-        Led_Cycle();
-        HAL_DelayMS(500);
+    Scheduler_AddTask(Led_Cycle, 1000);
+    Task_Scheduler_Init();
 
+    while (1) {
         // printf("[%.3f] Hello, World!\r\n", HAL_GetTick()/1000.0f);
         Console_Process();
     }

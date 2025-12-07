@@ -191,8 +191,8 @@ void HAL_TIM_IRQHandler(TIM_Handle *handle)
     /* TIM Update event */
     if ((itflag & (TIM_SR_UIF)) == (TIM_SR_UIF)) {
         if ((itsource & (TIM_DIER_UIE)) == (TIM_DIER_UIE)) {
-            handle->Instance->SR = ~TIM_SR_UIF;
-            // HAL_TIM_PeriodElapsedCallback(htim);
+            handle->Instance->SR &= ~TIM_SR_UIF;
+            handle->periodElapsedCallback(handle);
         }
     }
     /* TIM Break input event */
@@ -251,4 +251,27 @@ void HAL_TIM_IRQHandler(TIM_Handle *handle)
             // HAL_TIMEx_TransitionErrorCallback(htim);
         }
     }
+}
+
+__weak void HAL_TIM_periodElapsedCallback(TIM_Handle *handle)
+{
+    UNUSED(handle);
+}
+
+uint32_t HAL_TIM_GetCounter(TIM_Handle *handle)
+{
+    if (handle == NULL) {
+        return 0;
+    }
+
+    return handle->Instance->CNT;
+}
+
+void HAL_TIM_SetCounter(TIM_Handle *handle, uint32_t counter)
+{
+    if (handle == NULL) {
+        return;
+    }
+
+    handle->Instance->CNT = counter;
 }
