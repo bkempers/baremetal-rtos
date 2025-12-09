@@ -54,6 +54,8 @@ typedef enum {
 #define HAL_IS_BIT_SET(REG, BIT) (((REG) & (BIT)) == (BIT))
 #define HAL_IS_BIT_CLR(REG, BIT) (((REG) & (BIT)) == 0U)
 
+#define HAL_MAX_DELAY 0xFFFFFFFFU
+
 extern __IO uint32_t uwTick;
 extern uint32_t      uwTickPrio;
 extern HAL_TickFreq  uwTickFreq;
