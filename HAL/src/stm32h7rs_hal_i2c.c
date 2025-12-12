@@ -13,19 +13,40 @@
 #define I2C_XFER_CPLT_IT   (uint16_t) (0x0020U) /*!< Bit definition to manage only STOP evenement */
 #define I2C_XFER_RELOAD_IT (uint16_t) (0x0040U) /*!< Bit definition to manage only Reload of NBYTE */
 
+/* Private define for @ref PreviousState usage */
+#define I2C_STATE_MSK                                                                                                                                \
+    ((uint32_t) ((uint32_t) ((uint32_t) HAL_I2C_STATE_BUSY_TX | (uint32_t) HAL_I2C_STATE_BUSY_RX) & (uint32_t) (~((uint32_t) HAL_I2C_STATE_READY))))
+/*!< Mask State define, keep only RX and TX bits */
+#define I2C_STATE_NONE ((uint32_t) (HAL_I2C_MODE_NONE))
+/*!< Default Value */
+#define I2C_STATE_MASTER_BUSY_TX ((uint32_t) (((uint32_t) HAL_I2C_STATE_BUSY_TX & I2C_STATE_MSK) | (uint32_t) HAL_I2C_MODE_MASTER))
+/*!< Master Busy TX, combinaison of State LSB and Mode enum */
+#define I2C_STATE_MASTER_BUSY_RX ((uint32_t) (((uint32_t) HAL_I2C_STATE_BUSY_RX & I2C_STATE_MSK) | (uint32_t) HAL_I2C_MODE_MASTER))
+/*!< Master Busy RX, combinaison of State LSB and Mode enum */
+#define I2C_STATE_SLAVE_BUSY_TX ((uint32_t) (((uint32_t) HAL_I2C_STATE_BUSY_TX & I2C_STATE_MSK) | (uint32_t) HAL_I2C_MODE_SLAVE))
+/*!< Slave Busy TX, combinaison of State LSB and Mode enum */
+#define I2C_STATE_SLAVE_BUSY_RX ((uint32_t) (((uint32_t) HAL_I2C_STATE_BUSY_RX & I2C_STATE_MSK) | (uint32_t) HAL_I2C_MODE_SLAVE))
+/*!< Slave Busy RX, combinaison of State LSB and Mode enum  */
+#define I2C_STATE_MEM_BUSY_TX ((uint32_t) (((uint32_t) HAL_I2C_STATE_BUSY_TX & I2C_STATE_MSK) | (uint32_t) HAL_I2C_MODE_MEM))
+/*!< Memory Busy TX, combinaison of State LSB and Mode enum */
+#define I2C_STATE_MEM_BUSY_RX ((uint32_t) (((uint32_t) HAL_I2C_STATE_BUSY_RX & I2C_STATE_MSK) | (uint32_t) HAL_I2C_MODE_MEM))
+/*!< Memory Busy RX, combinaison of State LSB and Mode enum */
+
 static HAL_Status I2C_WaitOnFlagUntilTimeout(I2C_Handle *handle, uint32_t Flag, FlagStatus Status, uint32_t Timeout, uint32_t Tickstart);
 static HAL_Status I2C_IsErrorOccurred(I2C_Handle *handle, uint32_t Timeout, uint32_t Tickstart);
 static void       I2C_Flush_TXDR(I2C_Handle *handle);
+static void       I2C_TreatErrorCallback(I2C_Handle *handle);
 
 static HAL_Status I2C_Master_ISR_IT(struct __I2C_Handle *handle, uint32_t ITFlags, uint32_t ITSources);
 static HAL_Status I2C_Mem_ISR_IT(struct __I2C_Handle *handle, uint32_t ITFlags, uint32_t ITSources);
 
 // static void I2C_ITAddrCplt(I2C_HandleTypeDef *hi2c, uint32_t ITFlags);
-static void I2C_ITMasterSeqCplt(I2C_Handle *handle);
 // static void I2C_ITSlaveSeqCplt(I2C_HandleTypeDef *hi2c);
-static void I2C_ITMasterCplt(I2C_Handle *handle, uint32_t ITFlags);
 // static void I2C_ITSlaveCplt(I2C_HandleTypeDef *hi2c, uint32_t ITFlags);
 // static void I2C_ITListenCplt(I2C_HandleTypeDef *hi2c, uint32_t ITFlags);
+
+static void I2C_ITMasterCplt(I2C_Handle *handle, uint32_t ITFlags);
+static void I2C_ITMasterSeqCplt(I2C_Handle *handle);
 static void I2C_ITError(I2C_Handle *handle, uint32_t ErrorCode);
 
 static void I2C_Enable_IRQ(I2C_Handle *handle, uint16_t InterruptRequest);
@@ -682,7 +703,288 @@ HAL_Status HAL_I2C_Mem_Read_IT(I2C_Handle *handle, uint16_t DevAddress, uint16_t
     }
 }
 
-static HAL_Status I2C_Mem_ISR_IT(struct __I2C_Handle *handle, uint32_t ITFlags, uint32_t ITSources) {}
+static HAL_Status I2C_Mem_ISR_IT(struct __I2C_Handle *handle, uint32_t ITFlags, uint32_t ITSources)
+{
+    uint32_t direction  = I2C_GENERATE_START_WRITE;
+    uint32_t tmpITFlags = ITFlags;
+
+    if ((I2C_CHECK_FLAG(tmpITFlags, I2C_ISR_NACKF) != RESET) && (I2C_CHECK_IT_SOURCE(ITSources, I2C_CR1_NACKIE) != RESET)) {
+        /* Clear NACK Flag */
+        handle->Instance->ICR = I2C_ISR_NACKF;
+
+        /* Set corresponding Error Code */
+        /* No need to generate STOP, it is automatically done */
+        /* Error callback will be send during stop flag treatment */
+        handle->ErrorCode |= HAL_I2C_ERROR_AF;
+
+        /* Flush TX register */
+        I2C_Flush_TXDR(handle);
+    } else if ((I2C_CHECK_FLAG(tmpITFlags, I2C_ISR_RXNE) != RESET) && (I2C_CHECK_IT_SOURCE(ITSources, I2C_CR1_RXIE) != RESET)) {
+        /* Remove RXNE flag on temporary variable as read done */
+        tmpITFlags &= ~I2C_ISR_RXNE;
+
+        /* Read data from RXDR */
+        *handle->buffPtr = (uint8_t) handle->Instance->RXDR;
+
+        /* Increment Buffer pointer */
+        handle->buffPtr++;
+        handle->xferSize--;
+        handle->xferCount--;
+    } else if ((I2C_CHECK_FLAG(tmpITFlags, I2C_ISR_TXIS) != RESET) && (I2C_CHECK_IT_SOURCE(ITSources, I2C_CR1_TXIE) != RESET)) {
+        if (handle->MemAddress == 0xFFFFFFFFU) {
+            /* Write data to TXDR */
+            handle->Instance->TXDR = *handle->buffPtr;
+
+            /* Increment Buffer pointer */
+            handle->buffPtr++;
+            handle->xferSize--;
+            handle->xferCount--;
+        } else {
+            /* Write LSB part of Memory Address */
+            handle->Instance->TXDR = handle->MemAddress;
+
+            /* Reset Memaddress content */
+            handle->MemAddress = 0xFFFFFFFFU;
+        }
+    } else if ((I2C_CHECK_FLAG(tmpITFlags, I2C_ISR_TCR) != RESET) && (I2C_CHECK_IT_SOURCE(ITSources, I2C_CR1_TCIE) != RESET)) {
+        if ((handle->xferCount != 0U) && (handle->xferSize == 0U)) {
+            if (handle->xferCount > MAX_NBYTE_SIZE) {
+                handle->xferSize = MAX_NBYTE_SIZE;
+                I2C_TransferConfig(handle, (uint16_t) handle->DevAddress, (uint8_t) handle->xferSize, I2C_RELOAD_MODE, I2C_NO_STARTSTOP);
+            } else {
+                handle->xferSize = handle->xferCount;
+                I2C_TransferConfig(handle, (uint16_t) handle->DevAddress, (uint8_t) handle->xferSize, I2C_AUTOEND_MODE, I2C_NO_STARTSTOP);
+            }
+        } else {
+            /* Wrong size Status regarding TCR flag event */
+            /* Call the corresponding callback to inform upper layer of End of Transfer */
+            I2C_ITError(handle, HAL_I2C_ERROR_SIZE);
+        }
+    } else if ((I2C_CHECK_FLAG(tmpITFlags, I2C_ISR_TC) != RESET) && (I2C_CHECK_IT_SOURCE(ITSources, I2C_CR1_TCIE) != RESET)) {
+        /* Disable Interrupt related to address step */
+        I2C_Disable_IRQ(handle, I2C_XFER_TX_IT);
+
+        /* Enable ERR, TC, STOP, NACK and RXI interrupts */
+        I2C_Enable_IRQ(handle, I2C_XFER_RX_IT);
+
+        if (handle->State == HAL_I2C_STATE_BUSY_RX) {
+            direction = I2C_GENERATE_START_READ;
+        }
+
+        if (handle->xferCount > MAX_NBYTE_SIZE) {
+            handle->xferSize = MAX_NBYTE_SIZE;
+
+            /* Set NBYTES to write and reload if hi2c->XferCount > MAX_NBYTE_SIZE and generate RESTART */
+            I2C_TransferConfig(handle, (uint16_t) handle->DevAddress, (uint8_t) handle->xferSize, I2C_RELOAD_MODE, direction);
+        } else {
+            handle->xferSize = handle->xferCount;
+
+            /* Set NBYTES to write and generate RESTART */
+            I2C_TransferConfig(handle, (uint16_t) handle->DevAddress, (uint8_t) handle->xferSize, I2C_AUTOEND_MODE, direction);
+        }
+    } else {
+        /* Nothing to do */
+    }
+
+    if ((I2C_CHECK_FLAG(tmpITFlags, I2C_ISR_STOPF) != RESET) && (I2C_CHECK_IT_SOURCE(ITSources, I2C_CR1_STOPIE) != RESET)) {
+        /* Call I2C Master complete process */
+        I2C_ITMasterCplt(handle, tmpITFlags);
+    }
+
+    return HAL_OK;
+}
+
+static void I2C_ITMasterCplt(I2C_Handle *handle, uint32_t ITFlags)
+{
+    uint32_t      tmperror;
+    uint32_t      tmpITFlags = ITFlags;
+    __IO uint32_t tmpreg;
+
+    /* Clear STOP Flag */
+    handle->Instance->ICR = I2C_ISR_STOPF;
+
+    /* Disable Interrupts and Store Previous state */
+    if (handle->State == HAL_I2C_STATE_BUSY_TX) {
+        I2C_Disable_IRQ(handle, I2C_XFER_TX_IT);
+        handle->PreviousState = I2C_STATE_MASTER_BUSY_TX;
+    } else if (handle->State == HAL_I2C_STATE_BUSY_RX) {
+        I2C_Disable_IRQ(handle, I2C_XFER_RX_IT);
+        handle->PreviousState = I2C_STATE_MASTER_BUSY_RX;
+    } else {
+        /* Do nothing */
+    }
+
+    /* Clear Configuration Register 2 */
+    (handle->Instance->CR2 &= (uint32_t) ~((uint32_t) (I2C_CR2_SADD | I2C_CR2_HEAD10R | I2C_CR2_NBYTES | I2C_CR2_RELOAD | I2C_CR2_RD_WRN)));
+
+    /* Reset handle parameters */
+    handle->xferISR     = NULL;
+    handle->xferOptions = I2C_NO_OPTION_FRAME;
+
+    if ((((tmpITFlags) &I2C_ISR_STOPF) == I2C_ISR_STOPF ? SET : RESET) != RESET) {
+        /* Clear NACK Flag */
+        handle->Instance->ICR = I2C_ISR_NACKF;
+
+        /* Set acknowledge error code */
+        handle->ErrorCode |= HAL_I2C_ERROR_AF;
+    }
+
+    /* Fetch Last receive data if any */
+    if ((handle->State == HAL_I2C_STATE_ABORT) && ((((tmpITFlags) &I2C_ISR_RXNE) == I2C_ISR_RXNE ? SET : RESET) != RESET)) {
+        /* Read data from RXDR */
+        tmpreg = (uint8_t) handle->Instance->RXDR;
+        UNUSED(tmpreg);
+    }
+
+    /* Flush TX register */
+    I2C_Flush_TXDR(handle);
+
+    /* Store current volatile hi2c->ErrorCode, misra rule */
+    tmperror = handle->ErrorCode;
+
+    /* Call the corresponding callback to inform upper layer of End of Transfer */
+    if ((handle->State == HAL_I2C_STATE_ABORT) || (tmperror != HAL_I2C_ERROR_NONE)) {
+        /* Call the corresponding callback to inform upper layer of End of Transfer */
+        I2C_ITError(handle, handle->ErrorCode);
+    }
+    /* hi2c->State == HAL_I2C_STATE_BUSY_TX */
+    else if (handle->State == HAL_I2C_STATE_BUSY_TX) {
+        handle->State         = HAL_I2C_STATE_READY;
+        handle->PreviousState = I2C_STATE_NONE;
+
+        if (handle->Mode == HAL_I2C_MODE_MEM) {
+            handle->Mode = HAL_I2C_MODE_NONE;
+
+            /* Call the corresponding callback to inform upper layer of End of Transfer */
+            handle->memTxCpltCallback(handle);
+        } else {
+            handle->Mode = HAL_I2C_MODE_NONE;
+
+            /* Call the corresponding callback to inform upper layer of End of Transfer */
+            handle->masterTxCpltCallback(handle);
+        }
+    }
+    /* hi2c->State == HAL_I2C_STATE_BUSY_RX */
+    else if (handle->State == HAL_I2C_STATE_BUSY_RX) {
+        handle->State         = HAL_I2C_STATE_READY;
+        handle->PreviousState = I2C_STATE_NONE;
+
+        if (handle->Mode == HAL_I2C_MODE_MEM) {
+            handle->Mode = HAL_I2C_MODE_NONE;
+
+            /* Call the corresponding callback to inform upper layer of End of Transfer */
+            handle->memRxCpltCallback(handle);
+        } else {
+            handle->Mode = HAL_I2C_MODE_NONE;
+
+            /* Call the corresponding callback to inform upper layer of End of Transfer */
+            handle->masterRxCpltCallback(handle);
+        }
+    } else {
+        /* Nothing to do */
+    }
+}
+
+static void I2C_ITMasterSeqCplt(I2C_Handle *handle)
+{
+    /* Reset I2C handle mode */
+    handle->Mode = HAL_I2C_MODE_NONE;
+
+    /* No Generate Stop, to permit restart mode */
+    /* The stop will be done at the end of transfer, when I2C_AUTOEND_MODE enable */
+    if (handle->State == HAL_I2C_STATE_BUSY_TX) {
+        handle->State         = HAL_I2C_STATE_READY;
+        handle->PreviousState = I2C_STATE_MASTER_BUSY_TX;
+        handle->xferISR       = NULL;
+
+        /* Disable Interrupts */
+        I2C_Disable_IRQ(handle, I2C_XFER_TX_IT);
+
+        /* Call the corresponding callback to inform upper layer of End of Transfer */
+        handle->masterTxCpltCallback(handle);
+    }
+    /* hi2c->State == HAL_I2C_STATE_BUSY_RX */
+    else {
+        handle->State         = HAL_I2C_STATE_READY;
+        handle->PreviousState = I2C_STATE_MASTER_BUSY_RX;
+        handle->xferISR       = NULL;
+
+        /* Disable Interrupts */
+        I2C_Disable_IRQ(handle, I2C_XFER_RX_IT);
+
+        /* Call the corresponding callback to inform upper layer of End of Transfer */
+        handle->masterRxCpltCallback(handle);
+    }
+}
+
+static void I2C_ITError(I2C_Handle *handle, uint32_t ErrorCode)
+{
+    HAL_I2C_State tmpstate = handle->State;
+
+    /* Reset handle parameters */
+    handle->Mode        = HAL_I2C_MODE_NONE;
+    handle->xferOptions = I2C_NO_OPTION_FRAME;
+    handle->xferCount   = 0U;
+
+    /* Set new error code */
+    handle->ErrorCode |= ErrorCode;
+
+    /* Disable Interrupts */
+    if ((tmpstate == HAL_I2C_STATE_LISTEN) || (tmpstate == HAL_I2C_STATE_BUSY_TX_LISTEN) || (tmpstate == HAL_I2C_STATE_BUSY_RX_LISTEN)) {
+        /* Disable all interrupts, except interrupts related to LISTEN state */
+        I2C_Disable_IRQ(handle, I2C_XFER_RX_IT | I2C_XFER_TX_IT);
+
+        /* keep HAL_I2C_STATE_LISTEN if set */
+        handle->State = HAL_I2C_STATE_LISTEN;
+        // TODO: implement later?
+        // handle->xferISR       = I2C_Slave_ISR_IT;
+    } else {
+        /* Disable all interrupts */
+        I2C_Disable_IRQ(handle, I2C_XFER_LISTEN_IT | I2C_XFER_RX_IT | I2C_XFER_TX_IT);
+
+        /* Flush TX register */
+        I2C_Flush_TXDR(handle);
+
+        /* If state is an abort treatment on going, don't change state */
+        /* This change will be do later */
+        if (handle->State != HAL_I2C_STATE_ABORT) {
+            /* Set HAL_I2C_STATE_READY */
+            handle->State = HAL_I2C_STATE_READY;
+
+            /* Check if a STOPF is detected */
+            if ((((handle->Instance->ISR) & I2C_ISR_STOPF) == I2C_ISR_STOPF ? SET : RESET) == SET) {
+                if (((((handle->Instance->ISR) & I2C_ISR_STOPF) == I2C_ISR_STOPF) ? SET : RESET) == SET) {
+                    handle->Instance->ICR = I2C_ISR_NACKF;
+                    handle->ErrorCode |= HAL_I2C_ERROR_AF;
+                }
+
+                /* Clear STOP Flag */
+                handle->Instance->ICR = I2C_ISR_STOPF;
+            }
+        }
+        handle->xferISR = NULL;
+    }
+    // TODO: implement DMA later
+    {
+        I2C_TreatErrorCallback(handle);
+    }
+}
+
+static void I2C_TreatErrorCallback(I2C_Handle *handle)
+{
+    if (handle->State == HAL_I2C_STATE_ABORT) {
+        handle->State         = HAL_I2C_STATE_READY;
+        handle->PreviousState = (uint32_t) HAL_I2C_MODE_NONE;
+
+        /* Call the corresponding callback to inform upper layer of End of Transfer */
+        HAL_I2C_AbortCpltCallback(handle);
+    } else {
+        handle->PreviousState = (uint32_t) HAL_I2C_MODE_NONE;
+
+        /* Call the corresponding callback to inform upper layer of End of Transfer */
+        HAL_I2C_ErrorCallback(handle);
+    }
+}
 
 // HAL_Status HAL_I2C_Master_Seq_TX_IT(I2C_Handle *handle, uint16_t DevAddress, uint8_t *ptrData, uint16_t Size, uint32_t TXOptions) {}
 // HAL_Status HAL_I2C_Master_Seq_RX_IT(I2C_Handle *handle, uint16_t DevAddress, uint8_t *ptrData, uint16_t Size, uint32_t TXOptions) {}

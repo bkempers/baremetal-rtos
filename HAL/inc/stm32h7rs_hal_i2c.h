@@ -68,6 +68,18 @@ typedef enum {
 #define I2C_ADDRESSINGMODE_7BIT  (0x00000001U)
 #define I2C_ADDRESSINGMODE_10BIT (0x00000002U)
 
+#define I2C_DUALADDRESS_DISABLE (0x00000000U)
+#define I2C_DUALADDRESS_ENABLE  I2C_OAR2_OA2EN
+
+#define I2C_OA2_NOMASK ((uint8_t) 0x00U)
+#define I2C_OA2_MASK01 ((uint8_t) 0x01U)
+
+#define I2C_GENERALCALL_DISABLE (0x00000000U)
+#define I2C_GENERALCALL_ENABLE  I2C_CR1_GCEN
+
+#define I2C_NOSTRETCH_DISABLE (0x00000000U)
+#define I2C_NOSTRETCH_ENABLE  I2C_CR1_NOSTRETCH
+
 #define I2C_MEMADD_SIZE_8BIT  (0x00000001U)
 #define I2C_MEMADD_SIZE_16BIT (0x00000002U)
 
@@ -105,6 +117,14 @@ typedef struct __I2C_Handle {
     __IO uint32_t      AddrEventCount;
     __IO uint32_t      DevAddress;
     __IO uint32_t      MemAddress;
+
+    void (*masterTxCpltCallback)(struct __I2C_Handle *handle);
+    void (*masterRxCpltCallback)(struct __I2C_Handle *handle);
+    void (*listenCpltCallback)(struct __I2C_Handle *handle);
+    void (*memTxCpltCallback)(struct __I2C_Handle *handle);
+    void (*memRxCpltCallback)(struct __I2C_Handle *handle);
+    void (*errorCallback)(struct __I2C_Handle *handle);
+    void (*abortCpltCallback)(struct __I2C_Handle *handle);
 } I2C_Handle;
 
 HAL_Status HAL_I2C_Init(I2C_Handle *handle);

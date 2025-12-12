@@ -1,4 +1,3 @@
-# Collect all application source files
 set(APP_SOURCES
     # Main entry point
     main.c
@@ -7,6 +6,7 @@ set(APP_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/led.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/console.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/task_scheduler.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/bme680_sensor.c
     # ${CMAKE_CURRENT_SOURCE_DIR}/src/adc.c
     # ${CMAKE_CURRENT_SOURCE_DIR}/src/exti.c
     # ${CMAKE_CURRENT_SOURCE_DIR}/src/led_driver.c
@@ -15,6 +15,10 @@ set(APP_SOURCES
     # ${CMAKE_CURRENT_SOURCE_DIR}/src/systick.c
     # ${CMAKE_CURRENT_SOURCE_DIR}/src/timer.c
     # ${CMAKE_CURRENT_SOURCE_DIR}/src/uart_driver.c
+)
+
+set(DRIVERS_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/drivers/sensors/bme680/bme680.c
 )
 
 set(SYSTEM_SOURCES
@@ -26,11 +30,13 @@ set(SYSTEM_SOURCES
 add_executable(${PROJECT_NAME}.elf
     ${APP_SOURCES}
     ${SYSTEM_SOURCES}
+    ${DRIVERS_SOURCES}
 )
 
 # Add application include directories
 target_include_directories(${PROJECT_NAME}.elf PRIVATE
     ${CMAKE_BINARY_DIR}/Application/inc
+    ${CMAKE_BINARY_DIR}/Application/drivers
     ${CMAKE_CURRENT_SOURCE_DIR}/inc      # src/inc/
     ${CMAKE_CURRENT_SOURCE_DIR}          # src/ (for main.h if needed)
 )

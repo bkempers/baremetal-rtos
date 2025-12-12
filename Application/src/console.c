@@ -87,8 +87,8 @@ SYS_Status Console_Init()
 
 static void print_setup_information()
 {
-    INFO("STM32H7RS Serial Console");
-    INFO("VERSION: %u.%u.%u", MAJOR_VER, MINOR_VER, PATCH_VER);
+    PRINT_INFO("STM32H7RS Serial Console");
+    PRINT_INFO("VERSION: %u.%u.%u", MAJOR_VER, MINOR_VER, PATCH_VER);
 }
 
 void Console_Process(void)
@@ -97,15 +97,15 @@ void Console_Process(void)
     if (cmd_ready) {
         // Process command
         if (strcmp(cmd_buffer, "system") == 0) {
-            INFO("STM32H7RS Serial Console");
+            PRINT_INFO("STM32H7RS Serial Console");
         } else if (strcmp(cmd_buffer, "ver") == 0) {
-            INFO("VERSION: %u.%u.%u", MAJOR_VER, MINOR_VER, PATCH_VER);
+            PRINT_INFO("VERSION: %u.%u.%u", MAJOR_VER, MINOR_VER, PATCH_VER);
         } else if (strcmp(cmd_buffer, "clock") == 0) {
-            INFO("CLOCK: %.1f MHz", (SystemCoreClock / 1e6));
+            PRINT_INFO("CLOCK: %.1f MHz", (SystemCoreClock / 1e6));
         } else if (strcmp(cmd_buffer, "git") == 0) {
-            INFO("GIT BRANCH: %s & HASH: %s", GIT_BRANCH, GIT_COMMIT_SHORT);
+            PRINT_INFO("GIT BRANCH: %s & HASH: %s", GIT_BRANCH, GIT_COMMIT_SHORT);
         } else if (strlen(cmd_buffer) > 0) {
-            INFO("Unknown: %s", cmd_buffer);
+            PRINT_INFO("Unknown: %s", cmd_buffer);
         }
 
         // Reset for next command

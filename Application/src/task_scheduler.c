@@ -64,7 +64,7 @@ SYS_Status Task_Scheduler_Init(void)
     __NVIC_SetPriority(TIM2_IRQn, 8);
     __NVIC_EnableIRQ(TIM2_IRQn);
 
-    INFO("Starting task scheduler with %u tasks.", task_count);
+    PRINT_INFO("Starting task scheduler with %u tasks.", task_count);
     return SYS_OK;
 }
 
