@@ -19,6 +19,9 @@ int main(void)
 
     Led_Init();
     Console_Init();
+
+    // PRINT_INFO("attempting to start bme680");
+
     BME680_Sensor_Init();
 
     Scheduler_AddTask(Led_Cycle, 1000);

@@ -10,18 +10,60 @@ static volatile bool i2c_error       = false;
 BME680_Handle bme680_sensor_handle;
 I2C_Handle    i2c1_handler;
 
+static void I2C_Scan(void);
+
+void I2C_Debug_Registers(void)
+{
+    PRINT_INFO("=== I2C1 Register Dump ===");
+    PRINT_INFO("RCC->APB1ENR1: 0x%08u (bit 21 should be 1)", RCC->APB1ENR1);
+    PRINT_INFO("I2C1->CR1:     0x%08u", I2C1->CR1);
+    PRINT_INFO("I2C1->CR2:     0x%08u", I2C1->CR2);
+    PRINT_INFO("I2C1->TIMINGR: 0x%08u", I2C1->TIMINGR);
+    PRINT_INFO("I2C1->ISR:     0x%08u", I2C1->ISR);
+    
+    // Check specific bits
+    if (!(RCC->APB1ENR1 & RCC_APB1ENR1_I2C1_I3C1EN)) {
+        PRINT_ERROR("I2C1 clock NOT enabled!");
+    }
+    
+    if (!(I2C1->CR1 & I2C_CR1_PE)) {
+        PRINT_ERROR("I2C1 peripheral NOT enabled!");
+    }
+    
+    PRINT_INFO("GPIOB->MODER:  0x%08u (PB8/9 should be 0b10 = AF)", GPIOB->MODER);
+    PRINT_INFO("GPIOB->AFR[1]: 0x%08u (should have 0x44 for AF4)", GPIOB->AFR[1]);
+}
+
 bool BME680_Sensor_Init()
 {
     __HAL_RCC_GPIOB_CLK_ENABLE();
 
-    /* Configure PB8 and PB9 as I2C */
-    GPIO_Init i2c1_gpio;
-    i2c1_gpio.Pin       = GPIO_PIN_8 | GPIO_PIN_9; // PB8=SCL, PB9=SDA
-    i2c1_gpio.Mode      = GPIO_MODE_ALT_FUNC_OD;   // Alternate function, open-drain
-    i2c1_gpio.Pull      = GPIO_NOPULL_UP;          // No internal pull-ups (external on BME680 board)
-    i2c1_gpio.Speed     = GPIO_SPEED_FREQ_HIGH;    // High speed
-    i2c1_gpio.Alternate = ((uint8_t) 0x04);        // AF4 = I2C1
-    HAL_GPIO_Init(GPIOB, &i2c1_gpio);
+    /* Configure PB8 I2C */
+    GPIO_Init i2c1_gpio_scl = {0};
+    i2c1_gpio_scl.Pin       = GPIO_PIN_8; // PB9=SDA
+    i2c1_gpio_scl.Mode      = GPIO_MODE_ALT_FUNC_OD;   // Alternate function, open-drain
+    i2c1_gpio_scl.Pull      = GPIO_NOPULL_UP;          // No internal pull-ups (external on BME680 board)
+    i2c1_gpio_scl.Speed     = GPIO_SPEED_FREQ_HIGH;    // High speed
+    i2c1_gpio_scl.Alternate = ((uint8_t) 0x04);        // AF4 = I2C1
+    HAL_GPIO_Init(GPIOB, &i2c1_gpio_scl);
+
+    /* Configure PB9 as I2C */
+    GPIO_Init i2c1_gpio_sda = {0};
+    i2c1_gpio_sda.Pin       = GPIO_PIN_9; // PB9=SDA
+    i2c1_gpio_sda.Mode      = GPIO_MODE_ALT_FUNC_OD;   // Alternate function, open-drain
+    i2c1_gpio_sda.Pull      = GPIO_NOPULL_UP;          // No internal pull-ups (external on BME680 board)
+    i2c1_gpio_sda.Speed     = GPIO_SPEED_FREQ_HIGH;    // High speed
+    i2c1_gpio_sda.Alternate = ((uint8_t) 0x04);        // AF4 = I2C1
+    HAL_GPIO_Init(GPIOB, &i2c1_gpio_sda);
+
+
+    if ((i2c1_gpio_sda.Pin & (GPIO_PIN_8 | GPIO_PIN_9))) {
+        PRINT_INFO("GPIO Init for GPIOB pins 8/9:");
+        PRINT_INFO("  Pin: 0x%04u", i2c1_gpio_sda.Pin);
+        PRINT_INFO("  Mode: 0x%08u", i2c1_gpio_sda.Mode);
+        PRINT_INFO("  Alternate: 0x%02u", i2c1_gpio_sda.Alternate);
+        PRINT_INFO("    After AFR[1]: 0x%08u", GPIOB->AFR[1]);
+    }
 
     __HAL_RCC_I2C1_CLK_ENABLE();
 
@@ -38,6 +80,9 @@ bool BME680_Sensor_Init()
 
     i2c1_handler.masterTxCpltCallback = BME680_HAL_I2C_TxCpltCallback;
     i2c1_handler.masterRxCpltCallback = BME680_HAL_I2C_RxCpltCallback;
+    i2c1_handler.memTxCpltCallback = BME680_HAL_I2C_TxCpltCallback;
+    i2c1_handler.memRxCpltCallback = BME680_HAL_I2C_RxCpltCallback;
+    i2c1_handler.errorCallback = BME680_HAL_I2C_ErrorCallback;
 
     if (HAL_I2C_Init(&i2c1_handler) != HAL_OK) {
         Error_Handler();
@@ -50,10 +95,60 @@ bool BME680_Sensor_Init()
     __NVIC_SetPriority(I2C1_ER_IRQn, 5);
     __NVIC_EnableIRQ(I2C1_ER_IRQn);
 
+    I2C_Debug_Registers();
+
+        // ============ ADD THIS ============
+    HAL_DelayMS(200);  // Longer delay
+    
+    // Scan for devices
+    I2C_Scan();
+    
+    // Try simple read before full init
+    uint8_t chip_id;
+    i2c_rx_complete = false;
+    i2c_error = false;
+    
+    PRINT_INFO("Reading chip ID (register 0xD0)...");
+    HAL_Status status = HAL_I2C_Mem_Read_IT(&i2c1_handler, 
+                                                     0x77 << 1, 
+                                                     0xD0, 
+                                                     I2C_MEMADD_SIZE_8BIT, 
+                                                     &chip_id, 
+                                                     1);
+    
+    if (status != HAL_OK) {
+        PRINT_ERROR("Failed to start chip ID read");
+    }
+    
+    uint32_t timeout = HAL_GetTick() + 100;
+    while (!i2c_rx_complete && !i2c_error && HAL_GetTick() < timeout) {
+        // Wait
+    }
+    
+    if (i2c_error) {
+        PRINT_ERROR("Chip ID read error: %u", i2c1_handler.ErrorCode);
+        PRINT_ERROR("Device may be in SPI mode or not responding");
+        return false;
+    }
+    
+    if (!i2c_rx_complete) {
+        PRINT_ERROR("Chip ID read timeout");
+        return false;
+    }
+    
+    PRINT_INFO("Chip ID: 0x%02X", chip_id);
+    
+    if (chip_id != 0x61) {
+        PRINT_ERROR("Wrong chip ID! Expected 0x61");
+        return false;
+    }
+    // ============ END ADD ============
+    
     if (BME680_HAL_Init(&bme680_sensor_handle, &i2c1_handler, BME680_I2C_ADDR_PRIMARY) != BME680_OK) {
-        PRINT_ERROR("BME680 Sensor init failed");
         Error_Handler();
     }
+
+    Led_Toggle(2);
 
     BME680_HAL_ConfigureBasic(&bme680_sensor_handle);
     PRINT_INFO("BME680 initialized");
@@ -81,6 +176,38 @@ void BME680_HAL_I2C_RxCpltCallback(I2C_Handle *handle)
     i2c_rx_complete = true;
 }
 
+void BME680_HAL_I2C_ErrorCallback(I2C_Handle *handle)
+{
+    Error_Handler();
+}
+
+static void I2C_Scan(void)
+{
+    PRINT_INFO("Scanning I2C bus...");
+    
+    for (uint8_t addr = 0x76; addr < 0x7F; addr++) {
+        i2c_tx_complete = false;
+        i2c_error = false;
+        
+        // Try to send just the address (0-byte write)
+        uint8_t dummy = 0;
+        if (HAL_I2C_Master_TX_IT(&i2c1_handler, addr << 1, &dummy, 0) == HAL_OK) {
+            uint32_t timeout = HAL_GetTick() + 50;
+            while (!i2c_tx_complete && !i2c_error && HAL_GetTick() < timeout) {
+                // Wait
+            }
+            
+            if (!i2c_error) {
+                PRINT_INFO("  Found device at 0x%02X", addr);
+            }
+        }
+        
+        HAL_DelayMS(2);  // Small delay between scans
+    }
+    
+    PRINT_INFO("I2C scan complete");
+}
+
 void BME680_Sensor_Task()
 {
     BME680_StateTypeDef state = BME680_HAL_Process(&bme680_sensor_handle);
@@ -100,7 +227,7 @@ void BME680_Read_Trigger()
     }
 }
 
-static BME680_INTF_RET_TYPE bme68x_i2c_read_blocking_it(uint8_t reg_addr, uint8_t *reg_data, uint32_t len, void *intf_ptr)
+static BME680_INTF_RET_TYPE bme68x_i2c_read_it(uint8_t reg_addr, uint8_t *reg_data, uint32_t len, void *intf_ptr)
 {
     BME680_Handle *handle = (BME680_Handle *) intf_ptr;
 
@@ -117,13 +244,12 @@ static BME680_INTF_RET_TYPE bme68x_i2c_read_blocking_it(uint8_t reg_addr, uint8_
         if (HAL_GetTick() > timeout) {
             return BME680_E_COM_FAIL;
         }
-        // Could call your scheduler here if needed
     }
 
     return i2c_error ? BME680_E_COM_FAIL : BME680_OK;
 }
 
-static BME680_INTF_RET_TYPE bme68x_i2c_write_blocking_it(uint8_t reg_addr, const uint8_t *reg_data, uint32_t len, void *intf_ptr)
+static BME680_INTF_RET_TYPE bme68x_i2c_write_it(uint8_t reg_addr, const uint8_t *reg_data, uint32_t len, void *intf_ptr)
 {
     BME680_Handle *handle = (BME680_Handle *) intf_ptr;
 
@@ -142,34 +268,6 @@ static BME680_INTF_RET_TYPE bme68x_i2c_write_blocking_it(uint8_t reg_addr, const
     }
 
     return i2c_error ? BME680_E_COM_FAIL : BME680_OK;
-}
-
-/**
- * @brief Non-blocking I2C read (used during measurements)
- */
-static int8_t bme68x_i2c_read_async(BME680_Handle *handle, uint8_t reg_addr, uint8_t *reg_data, uint32_t len)
-{
-    i2c_rx_complete = false;
-    i2c_error       = false;
-
-    if (HAL_I2C_Mem_Read_IT(handle->hi2c, handle->i2c_addr << 1, reg_addr, I2C_MEMADD_SIZE_8BIT, reg_data, len) == HAL_OK) {
-        return BME680_OK;
-    }
-    return BME680_E_COM_FAIL;
-}
-
-/**
- * @brief Non-blocking I2C write (used during measurements)
- */
-static int8_t bme68x_i2c_write_async(BME680_Handle *handle, uint8_t reg_addr, const uint8_t *reg_data, uint32_t len)
-{
-    i2c_tx_complete = false;
-    i2c_error       = false;
-
-    if (HAL_I2C_Mem_Write_IT(handle->hi2c, handle->i2c_addr << 1, reg_addr, I2C_MEMADD_SIZE_8BIT, (uint8_t *) reg_data, len) == HAL_OK) {
-        return BME680_OK;
-    }
-    return BME680_E_COM_FAIL;
 }
 
 static void bme68x_delay_us(uint32_t period, void *intf_ptr)
@@ -191,15 +289,18 @@ int8_t BME680_HAL_Init(BME680_Handle *handle, I2C_Handle *hi2c, uint8_t i2c_addr
     handle->state    = BME680_STATE_IDLE;
 
     // Use blocking I2C for initialization (one-time setup)
-    handle->bme_dev.read     = bme68x_i2c_read_blocking_it;
-    handle->bme_dev.write    = bme68x_i2c_write_blocking_it;
+    handle->bme_dev.read     = bme68x_i2c_read_it;
+    handle->bme_dev.write    = bme68x_i2c_write_it;
     handle->bme_dev.delay_us = bme68x_delay_us;
     handle->bme_dev.intf     = BME680_I2C_INTF;
     handle->bme_dev.intf_ptr = handle; // Pass handle, not just I2C
     handle->bme_dev.amb_temp = 25;
-
+    
+    Led_Toggle(1);
     result = bme68x_init(&handle->bme_dev);
+    Led_Toggle(3);
     if (result != BME680_OK) {
+        PRINT_INFO("Failed to initialize bme68x driver with result %d", result);
         handle->state = BME680_STATE_ERROR;
         return result;
     }
@@ -270,14 +371,13 @@ BME680_StateTypeDef BME680_HAL_Process(BME680_Handle *handle)
             handle->measurement_duration_ms = 50; // ~50ms for TPH
         }
 
-        // Trigger forced mode via async I2C write
-        result = bme68x_i2c_write_async(handle, BME680_REG_CTRL_MEAS, &mode_reg_val, 1);
+        result = bme68x_set_op_mode(BME680_FORCED_MODE, &handle->bme_dev);
         if (result == BME680_OK) {
             handle->measurement_start_tick = HAL_GetTick();
-            handle->state                  = BME680_STATE_WAITING_MEASUREMENT;
+            handle->state = BME680_STATE_WAITING_MEASUREMENT;
         } else {
             handle->error_code = result;
-            handle->state      = BME680_STATE_ERROR;
+            handle->state = BME680_STATE_ERROR;
         }
         break;
 
@@ -295,7 +395,6 @@ BME680_StateTypeDef BME680_HAL_Process(BME680_Handle *handle)
 
     case BME680_STATE_READING_DATA:
         // Read sensor data using blocking API (Bosch API limitation)
-        // This is fast (<5ms) so acceptable
         result = bme68x_get_data(BME680_FORCED_MODE, sensor_data, &n_fields, &handle->bme_dev);
 
         if (result == BME680_OK && n_fields > 0) {

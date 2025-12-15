@@ -31,6 +31,26 @@ print_info() {
     echo -e "${BLUE}[INFO]${NC} $1"
 }
 
+# Check if a USB device is an STM32 Nucleo board
+is_stm32_device() {
+    local device=$1
+    
+    # Get detailed USB device info for this specific serial device
+    local ioreg_data=$(ioreg -r -c IOUSBHostDevice -l | grep -B 20 -A 20 "$device" || true)
+    
+    if [ -z "$ioreg_data" ]; then
+        return 1
+    fi
+    
+    # Look for STMicroelectronics vendor ID (0x483 or decimal 1155)
+    # The ioreg output shows it as "idVendor" = 1155 or 0x483
+    if echo "$ioreg_data" | grep -E '"idVendor" = (1155|0x483)' > /dev/null 2>&1; then
+        return 0
+    fi
+    
+    return 1
+}
+
 # Show usage
 usage() {
     cat << EOF
@@ -44,6 +64,7 @@ Commands:
     erase           Erase target flash memory
     gdb             Start GDB server
     size            Show memory usage
+    serial          Connect to STM32 board via serial (default: 115200 baud)
     info            Show microcontroller info
     format          Auto-format code
     release         Build in release mode
@@ -143,6 +164,73 @@ show_size() {
     fi
 }
 
+# Connect to STM32 Nucleo board via serial
+connect_serial() {
+    local baud_rate=${1:-115200}
+    
+    print_msg "Searching for STM32 Nucleo boards..."
+    
+    # Find all tty.usbmodem devices
+    local devices=(/dev/tty.usbmodem*)
+    local stm32_devices=()
+    
+    # Check if any devices exist
+    if [ ! -e "${devices[0]}" ]; then
+        print_error "No USB modem devices found"
+        print_info "Make sure your STM32 Nucleo board is connected"
+        return 1
+    fi
+    
+    # Filter for STM32 devices
+    for device in "${devices[@]}"; do
+        local device_name=$(basename "$device")
+        if is_stm32_device "$device_name"; then
+            stm32_devices+=("$device")
+            print_info "Found STM32 device: $device"
+        fi
+    done
+    
+    # Check if we found any STM32 devices
+    if [ ${#stm32_devices[@]} -eq 0 ]; then
+        print_error "No STM32 Nucleo boards found"
+        print_info "Found USB modems, but none are STMicroelectronics devices:"
+        for device in "${devices[@]}"; do
+            echo "  - $device"
+        done
+        return 1
+    fi
+    
+    local selected_device
+    
+    # If only one STM32 device, use it automatically
+    if [ ${#stm32_devices[@]} -eq 1 ]; then
+        selected_device="${stm32_devices[0]}"
+        print_msg "Connecting to ${selected_device} at ${baud_rate} baud..."
+    else
+        # Multiple devices - let user choose
+        print_warning "Multiple STM32 devices found:"
+        for i in "${!stm32_devices[@]}"; do
+            echo "  [$i] ${stm32_devices[$i]}"
+        done
+        
+        read -p "Select device number [0-$((${#stm32_devices[@]}-1))]: " selection
+        
+        if [[ "$selection" =~ ^[0-9]+$ ]] && [ "$selection" -ge 0 ] && [ "$selection" -lt ${#stm32_devices[@]} ]; then
+            selected_device="${stm32_devices[$selection]}"
+            print_msg "Connecting to ${selected_device} at ${baud_rate} baud..."
+        else
+            print_error "Invalid selection"
+            return 1
+        fi
+    fi
+    
+    # Connect using screen
+    print_info "Press Ctrl+A then K to exit screen session"
+    print_info "Press Ctrl+A then Ctrl+D to detach (leave running in background)"
+    sleep 1
+    screen "$selected_device" $baud_rate
+}
+
 # Show STM32 Info 
 show_info() {
     print_info "Querying connected STM32 microcontroller..."
@@ -233,6 +321,9 @@ case ${COMMAND} in
         ;;
     size)
         show_size
+        ;;
+    serial)
+        connect_serial 115200
         ;;
     info)
         show_info

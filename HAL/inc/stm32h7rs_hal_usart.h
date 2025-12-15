@@ -204,6 +204,8 @@ void HAL_USART_txrxCpltCallback(USART_Handle *handle);
 void HAL_USART_errorCallback(USART_Handle *handle);
 void HAL_USART_abortCpltCallback(USART_Handle *handle);
 
+HAL_USART_State HAL_USART_GetState(const USART_Handle *handle);
+
 // void USART1_IRHandler(void);
 // void USART2_IRHandler(void);
 // void USART3_IRHandler(void);

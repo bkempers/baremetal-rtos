@@ -7,6 +7,7 @@
 
 // locals
 #include "stm32h7rs_hal_usart.h"
+#include "console.h"
 
 extern USART_Handle usart3;
 
@@ -51,15 +52,26 @@ int _write(int file, char *ptr, int len)
     // We'll implement UART output later
     (void) file;
     //(void) ptr;
-    USART3->CR1 &= ~USART_CR1_RXNEIE;
+    //
+    // // Wait for any previous transmission to complete
+    // while (HAL_USART_GetState(&usart3) != HAL_USART_STATE_READY) {
+    //     // Busy wait or timeout
+    // }
+    //
+    // USART3->CR1 &= ~USART_CR1_RXNEIE;
+    // HAL_USART_Transmit_IT(&usart3, (uint8_t *) ptr, len);
+    // // HAL_USART_Transmit(&usart3, (uint8_t*)ptr, len, 1000);
+    // USART3->CR1 |= USART_CR1_RXNEIE;
+    //
+    // // Wait for THIS transmission to complete before returning
+    // while (HAL_USART_GetState(&usart3) != HAL_USART_STATE_READY) {
+    //     // Busy wait
+    // }
+    //
+    // // Return number of bytes "written"
+    // return len;
 
-    HAL_USART_Transmit_IT(&usart3, (uint8_t *) ptr, len);
-    // HAL_USART_Transmit(&usart3, (uint8_t*)ptr, len, 1000);
-
-    USART3->CR1 |= USART_CR1_RXNEIE;
-
-    // Return number of bytes "written"
-    return len;
+    return Console_Write(ptr, len);
 }
 
 /**

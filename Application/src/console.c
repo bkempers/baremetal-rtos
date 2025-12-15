@@ -21,7 +21,23 @@ typedef struct {
 static trace_entry_t     trace_buffer[TRACE_SIZE];
 static volatile uint16_t trace_index = 0;
 
+#define TX_BUFFER_SIZE 1024
+static uint8_t tx_buffer[TX_BUFFER_SIZE];
+static volatile uint16_t tx_head = 0;
+static volatile uint16_t tx_tail = 0;
+static volatile uint8_t tx_busy = 0;
+
 static void print_setup_information();
+static void console_start_transmission(void);
+
+static void print_setup_information()
+{
+    PRINT_INFO("\n===========================");
+    PRINT_INFO("STM32H7RS Serial Console");
+    PRINT_INFO("VERSION: %u.%u.%u", MAJOR_VER, MINOR_VER, PATCH_VER);
+    PRINT_INFO("GIT BRANCH: %s & HASH: %s", GIT_BRANCH, GIT_COMMIT_SHORT);
+    PRINT_INFO("\n===========================\n");
+}
 
 SYS_Status Console_Init()
 {
@@ -70,7 +86,7 @@ SYS_Status Console_Init()
     usart3.errorCallback    = HAL_USART_errorCallback;
 
     // **Enable RXNE interrupt directly - don't use HAL_USART_Receive_IT**
-    USART3->CR1 |= USART_CR1_RXNEIE; // Enable RX interrupt
+    //USART3->CR1 |= USART_CR1_RXNEIE; // Enable RX interrupt
 
     // Initialize USART
     if (HAL_USART_Init(&usart3) != HAL_OK) {
@@ -80,15 +96,9 @@ SYS_Status Console_Init()
     __NVIC_SetPriority(USART3_IRQn, 5);
     __NVIC_EnableIRQ(USART3_IRQn);
 
-    // print_setup_information();
+    print_setup_information();
 
     return SYS_OK;
-}
-
-static void print_setup_information()
-{
-    PRINT_INFO("STM32H7RS Serial Console");
-    PRINT_INFO("VERSION: %u.%u.%u", MAJOR_VER, MINOR_VER, PATCH_VER);
 }
 
 void Console_Process(void)
@@ -128,56 +138,96 @@ void Console_Process(void)
     trace_index = 0;
 }
 
+int Console_Write(const char *data, int len)
+{
+    // Disable interrupts for atomic buffer access
+    __disable_irq();
+    
+    for (int i = 0; i < len; i++) {
+        uint16_t next_head = (tx_head + 1) % TX_BUFFER_SIZE;
+        
+        // Check if buffer full
+        if (next_head == tx_tail) {
+            __enable_irq();
+            return i; // Return bytes actually queued
+        }
+        
+        tx_buffer[tx_head] = data[i];
+        tx_head = next_head;
+    }
+    
+    // Start transmission if idle
+    if (!tx_busy) {
+        console_start_transmission();
+    }
+    
+    __enable_irq();
+    return len;
+}
+
+static void console_start_transmission(void)
+{
+    if (tx_head == tx_tail) {
+        return; // Nothing to send
+    }
+    
+    tx_busy = 1;
+    USART3->CR1 &= ~USART_CR1_RXNEIE;
+    
+    // Send one byte
+    HAL_USART_Transmit_IT(&usart3, &tx_buffer[tx_tail], 1);
+}
+
 void USART3_IRHandler(void)
 {
-    // ========================================================================
-    // HANDLE RX OURSELVES (outside HAL state machine)
-    // ========================================================================
-    if ((USART3->ISR & USART_ISR_RXNE) && (USART3->CR1 & USART_CR1_RXNEIE)) {
-        // Reading RDR clears RXNE automatically
-        char received = (char) (USART3->RDR & 0xFF);
-
-        // Echo character back
-        while (!(USART3->ISR & USART_ISR_TXE))
-            ;
-        USART3->TDR = received;
-
-        // Process character
-        if (received == '\r' || received == '\n') {
-            if (cmd_index > 0) {
-                cmd_buffer[cmd_index] = '\0';
-                cmd_ready             = true;
-
-                // Send newline
-                while (!(USART3->ISR & USART_ISR_TXE))
-                    ;
-                USART3->TDR = '\r';
-                while (!(USART3->ISR & USART_ISR_TXE))
-                    ;
-                USART3->TDR = '\n';
-            }
-        } else if (received == '\b' || received == 127) {
-            // Backspace
-            if (cmd_index > 0) {
-                cmd_index--;
-                // Erase on terminal
-                while (!(USART3->ISR & USART_ISR_TXE))
-                    ;
-                USART3->TDR = '\b';
-                while (!(USART3->ISR & USART_ISR_TXE))
-                    ;
-                USART3->TDR = ' ';
-                while (!(USART3->ISR & USART_ISR_TXE))
-                    ;
-                USART3->TDR = '\b';
-            }
-        } else if (received >= 32 && received <= 126) {
-            // Printable character
-            if (cmd_index < 127) {
-                cmd_buffer[cmd_index++] = received;
-            }
-        }
-    }
+    // // ========================================================================
+    // // HANDLE RX OURSELVES (outside HAL state machine)
+    // // ========================================================================
+    // if ((USART3->ISR & USART_ISR_RXNE) && (USART3->CR1 & USART_CR1_RXNEIE)) {
+    //     // Reading RDR clears RXNE automatically
+    //     char received = (char) (USART3->RDR & 0xFF);
+    //
+    //     // Echo character back
+    //     while (!(USART3->ISR & USART_ISR_TXE))
+    //         ;
+    //     USART3->TDR = received;
+    //
+    //     // Process character
+    //     if (received == '\r' || received == '\n') {
+    //         if (cmd_index > 0) {
+    //             cmd_buffer[cmd_index] = '\0';
+    //             cmd_ready             = true;
+    //
+    //             // Send newline
+    //             while (!(USART3->ISR & USART_ISR_TXE))
+    //                 ;
+    //             USART3->TDR = '\r';
+    //             while (!(USART3->ISR & USART_ISR_TXE))
+    //                 ;
+    //             USART3->TDR = '\n';
+    //         }
+    //     } else if (received == '\b' || received == 127) {
+    //         // Backspace
+    //         if (cmd_index > 0) {
+    //             cmd_index--;
+    //             // Erase on terminal
+    //             while (!(USART3->ISR & USART_ISR_TXE))
+    //                 ;
+    //             USART3->TDR = '\b';
+    //             while (!(USART3->ISR & USART_ISR_TXE))
+    //                 ;
+    //             USART3->TDR = ' ';
+    //             while (!(USART3->ISR & USART_ISR_TXE))
+    //                 ;
+    //             USART3->TDR = '\b';
+    //         }
+    //     } else if (received >= 32 && received <= 126) {
+    //         // Printable character
+    //         if (cmd_index < 127) {
+    //             cmd_buffer[cmd_index++] = received;
+    //         }
+    //     }
+    // }
 
     HAL_USART_IRQHandler(&usart3);
 }
@@ -186,6 +236,16 @@ void HAL_USART_txCpltCallback(USART_Handle *handle)
 {
     // Transmission complete
     // Led_Toggle(1);
+    tx_tail = (tx_tail + 1) % TX_BUFFER_SIZE;
+    
+    if (tx_head != tx_tail) {
+        // More data waiting
+        HAL_USART_Transmit_IT(&usart3, &tx_buffer[tx_tail], 1);
+    } else {
+        // Done
+        tx_busy = 0;
+        USART3->CR1 |= USART_CR1_RXNEIE;
+    }
 }
 
 void HAL_USART_rxCpltCallback(USART_Handle *handle)

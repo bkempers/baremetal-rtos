@@ -730,6 +730,11 @@ static void USART_TxISR_8FIFO(USART_Handle *handle)
     }
 }
 
+HAL_USART_State HAL_USART_GetState(const USART_Handle *handle)
+{
+  return handle->State;
+}
+
 void usart_enable_interrupt(USART_Handle *handle, uint32_t interrupt)
 {
     // Extract which control register (CR1=1, CR2=2, CR3=3)

@@ -109,4 +109,6 @@ void BME680_HAL_I2C_TxCpltCallback(I2C_Handle *handle);
  */
 void BME680_HAL_I2C_RxCpltCallback(I2C_Handle *handle);
 
+void BME680_HAL_I2C_ErrorCallback(I2C_Handle *handle);
+
 #endif
