@@ -12,35 +12,13 @@ I2C_Handle    i2c1_handler;
 
 static void I2C_Scan(void);
 
-void I2C_Debug_Registers(void)
-{
-    PRINT_INFO("=== I2C1 Register Dump ===");
-    PRINT_INFO("RCC->APB1ENR1: 0x%08u (bit 21 should be 1)", RCC->APB1ENR1);
-    PRINT_INFO("I2C1->CR1:     0x%08u", I2C1->CR1);
-    PRINT_INFO("I2C1->CR2:     0x%08u", I2C1->CR2);
-    PRINT_INFO("I2C1->TIMINGR: 0x%08u", I2C1->TIMINGR);
-    PRINT_INFO("I2C1->ISR:     0x%08u", I2C1->ISR);
-    
-    // Check specific bits
-    if (!(RCC->APB1ENR1 & RCC_APB1ENR1_I2C1_I3C1EN)) {
-        PRINT_ERROR("I2C1 clock NOT enabled!");
-    }
-    
-    if (!(I2C1->CR1 & I2C_CR1_PE)) {
-        PRINT_ERROR("I2C1 peripheral NOT enabled!");
-    }
-    
-    PRINT_INFO("GPIOB->MODER:  0x%08u (PB8/9 should be 0b10 = AF)", GPIOB->MODER);
-    PRINT_INFO("GPIOB->AFR[1]: 0x%08u (should have 0x44 for AF4)", GPIOB->AFR[1]);
-}
-
 bool BME680_Sensor_Init()
 {
     __HAL_RCC_GPIOB_CLK_ENABLE();
 
     /* Configure PB8 I2C */
     GPIO_Init i2c1_gpio_scl = {0};
-    i2c1_gpio_scl.Pin       = GPIO_PIN_8; // PB9=SDA
+    i2c1_gpio_scl.Pin       = GPIO_PIN_8; // PB8=SCL
     i2c1_gpio_scl.Mode      = GPIO_MODE_ALT_FUNC_OD;   // Alternate function, open-drain
     i2c1_gpio_scl.Pull      = GPIO_NOPULL_UP;          // No internal pull-ups (external on BME680 board)
     i2c1_gpio_scl.Speed     = GPIO_SPEED_FREQ_HIGH;    // High speed
@@ -55,15 +33,6 @@ bool BME680_Sensor_Init()
     i2c1_gpio_sda.Speed     = GPIO_SPEED_FREQ_HIGH;    // High speed
     i2c1_gpio_sda.Alternate = ((uint8_t) 0x04);        // AF4 = I2C1
     HAL_GPIO_Init(GPIOB, &i2c1_gpio_sda);
-
-
-    if ((i2c1_gpio_sda.Pin & (GPIO_PIN_8 | GPIO_PIN_9))) {
-        PRINT_INFO("GPIO Init for GPIOB pins 8/9:");
-        PRINT_INFO("  Pin: 0x%04u", i2c1_gpio_sda.Pin);
-        PRINT_INFO("  Mode: 0x%08u", i2c1_gpio_sda.Mode);
-        PRINT_INFO("  Alternate: 0x%02u", i2c1_gpio_sda.Alternate);
-        PRINT_INFO("    After AFR[1]: 0x%08u", GPIOB->AFR[1]);
-    }
 
     __HAL_RCC_I2C1_CLK_ENABLE();
 
@@ -95,54 +64,10 @@ bool BME680_Sensor_Init()
     __NVIC_SetPriority(I2C1_ER_IRQn, 5);
     __NVIC_EnableIRQ(I2C1_ER_IRQn);
 
-    I2C_Debug_Registers();
-
-        // ============ ADD THIS ============
     HAL_DelayMS(200);  // Longer delay
     
     // Scan for devices
     I2C_Scan();
-    
-    // Try simple read before full init
-    uint8_t chip_id;
-    i2c_rx_complete = false;
-    i2c_error = false;
-    
-    PRINT_INFO("Reading chip ID (register 0xD0)...");
-    HAL_Status status = HAL_I2C_Mem_Read_IT(&i2c1_handler, 
-                                                     0x77 << 1, 
-                                                     0xD0, 
-                                                     I2C_MEMADD_SIZE_8BIT, 
-                                                     &chip_id, 
-                                                     1);
-    
-    if (status != HAL_OK) {
-        PRINT_ERROR("Failed to start chip ID read");
-    }
-    
-    uint32_t timeout = HAL_GetTick() + 100;
-    while (!i2c_rx_complete && !i2c_error && HAL_GetTick() < timeout) {
-        // Wait
-    }
-    
-    if (i2c_error) {
-        PRINT_ERROR("Chip ID read error: %u", i2c1_handler.ErrorCode);
-        PRINT_ERROR("Device may be in SPI mode or not responding");
-        return false;
-    }
-    
-    if (!i2c_rx_complete) {
-        PRINT_ERROR("Chip ID read timeout");
-        return false;
-    }
-    
-    PRINT_INFO("Chip ID: 0x%02X", chip_id);
-    
-    if (chip_id != 0x61) {
-        PRINT_ERROR("Wrong chip ID! Expected 0x61");
-        return false;
-    }
-    // ============ END ADD ============
     
     if (BME680_HAL_Init(&bme680_sensor_handle, &i2c1_handler, BME680_I2C_ADDR_PRIMARY) != BME680_OK) {
         Error_Handler();
@@ -178,7 +103,10 @@ void BME680_HAL_I2C_RxCpltCallback(I2C_Handle *handle)
 
 void BME680_HAL_I2C_ErrorCallback(I2C_Handle *handle)
 {
-    Error_Handler();
+    i2c_error = true;
+    PRINT_INFO("Failed to initialize BME680, exiting.");
+    Led_Toggle(3);
+    // Error_Handler();
 }
 
 static void I2C_Scan(void)
@@ -231,10 +159,14 @@ static BME680_INTF_RET_TYPE bme68x_i2c_read_it(uint8_t reg_addr, uint8_t *reg_da
 {
     BME680_Handle *handle = (BME680_Handle *) intf_ptr;
 
+    PRINT_INFO("I2C Read: reg=0x%02X, len=%u", reg_addr, len);
+
     i2c_rx_complete = false;
     i2c_error       = false;
+    HAL_Status status = HAL_I2C_Mem_Read_IT(handle->hi2c, handle->i2c_addr << 1, reg_addr, I2C_MEMADD_SIZE_8BIT, reg_data, len);
 
-    if (HAL_I2C_Mem_Read_IT(handle->hi2c, handle->i2c_addr << 1, reg_addr, I2C_MEMADD_SIZE_8BIT, reg_data, len) != HAL_OK) {
+    if (status != HAL_OK) {
+        PRINT_ERROR("HAL_I2C_Mem_Read_IT failed: %d", status);
         return BME680_E_COM_FAIL;
     }
 
@@ -242,11 +174,20 @@ static BME680_INTF_RET_TYPE bme68x_i2c_read_it(uint8_t reg_addr, uint8_t *reg_da
     uint32_t timeout = HAL_GetTick() + 100;
     while (!i2c_rx_complete && !i2c_error) {
         if (HAL_GetTick() > timeout) {
+            PRINT_ERROR("I2C Read timeout");
+            PRINT_ERROR("  ISR: 0x%08u", handle->hi2c->Instance->ISR);
+            PRINT_ERROR("  State: %d", handle->hi2c->State);
             return BME680_E_COM_FAIL;
         }
     }
 
-    return i2c_error ? BME680_E_COM_FAIL : BME680_OK;
+    if (i2c_error) {
+        PRINT_ERROR("I2C Read error: 0x%08u", handle->hi2c->ErrorCode);
+        return BME680_E_COM_FAIL;
+    }
+    
+    PRINT_INFO("I2C Read success, data[0]=0x%02X", reg_data[0]);
+    return BME680_OK;
 }
 
 static BME680_INTF_RET_TYPE bme68x_i2c_write_it(uint8_t reg_addr, const uint8_t *reg_data, uint32_t len, void *intf_ptr)

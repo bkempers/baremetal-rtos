@@ -20,13 +20,13 @@ int main(void)
     Led_Init();
     Console_Init();
 
-    // PRINT_INFO("attempting to start bme680");
-
-    BME680_Sensor_Init();
-
+    if (BME680_Sensor_Init()) {
+        Scheduler_AddTask(BME680_Sensor_Task, 100);
+        Scheduler_AddTask(BME680_Read_Trigger, 2000);
+    }
+    
+    Led_Reset();
     Scheduler_AddTask(Led_Cycle, 1000);
-    Scheduler_AddTask(BME680_Sensor_Task, 100);
-    Scheduler_AddTask(BME680_Read_Trigger, 2000);
     Task_Scheduler_Init();
 
     while (1) {

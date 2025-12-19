@@ -14,6 +14,7 @@ void Led_Init(void);
 void Led_Toggle(uint8_t led_num);
 void Led_Cycle(void);
 void Led_Error(void);
+void Led_Reset(void);
 
 // TODO: maybe add later
 // void Led_Success(void);

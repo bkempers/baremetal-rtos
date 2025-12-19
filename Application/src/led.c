@@ -4,6 +4,7 @@
 #include "led.h"
 #include "stm32h7rs_hal.h"
 #include "stm32h7rs_hal_gpio.h"
+#include "stm32h7rsxx.h"
 
 void Led_Init(void)
 {
@@ -49,6 +50,13 @@ void Led_Toggle(uint8_t led_num)
         HAL_GPIO_Toggle(GPIOB, LED3_PIN);
         break; // Red
     }
+}
+
+void Led_Reset(void)
+{
+    HAL_GPIO_Write(GPIOD, LED1_PIN, GPIO_PIN_RESET);
+    HAL_GPIO_Write(GPIOD, LED2_PIN, GPIO_PIN_RESET);
+    HAL_GPIO_Write(GPIOB, LED3_PIN, GPIO_PIN_RESET);
 }
 
 void Led_Cycle(void)
