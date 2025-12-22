@@ -20,19 +20,17 @@ int main(void)
     Led_Init();
     Console_Init();
 
-    if (BME680_Sensor_Init()) {
-        Scheduler_AddTask(BME680_Sensor_Task, 100);
-        Scheduler_AddTask(BME680_Read_Trigger, 2000);
-    }
+    // if (BME680_Sensor_Init()) {
+    //     Scheduler_AddTask(BME680_Sensor_Task, 100);
+    //     Scheduler_AddTask(BME680_Read_Trigger, 2000);
+    // }
     
-    Led_Reset();
-    Scheduler_AddTask(Led_Cycle, 1000);
+    // Led_Reset();
+    //Scheduler_AddTask(Led_Cycle, 1000);
+    Scheduler_AddTask(Console_Process, 100);
     Task_Scheduler_Init();
 
-    while (1) {
-        // printf("[%.3f] Hello, World!\r\n", HAL_GetTick()/1000.0f);
-        Console_Process();
-    }
+    while (1) {}
 
     return 1;
 }

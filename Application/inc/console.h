@@ -20,6 +20,8 @@
 
 SYS_Status Console_Init();
 void       Console_Process();
+
 int Console_Write(const char* data, int len);
+int Console_Read(char* data, int len);
 
 #endif // CONSOLE_H

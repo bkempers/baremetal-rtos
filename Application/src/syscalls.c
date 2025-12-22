@@ -84,11 +84,9 @@ int _read(int file, char *ptr, int len)
     (void) ptr;
     (void) len;
 
-    HAL_USART_Receiver_IT(&usart3, (uint8_t *) ptr, len);
+    // HAL_USART_Receiver_IT(&usart3, (uint8_t *) ptr, len);
     // HAL_USART_Receive(&usart3, (uint8_t*)ptr, len, 1000);
-
-    // No input available in bare metal
-    return 0;
+    return Console_Read(ptr, len);
 }
 
 /**

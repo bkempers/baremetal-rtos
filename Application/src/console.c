@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include "console.h"
+#include "ringbuffer.h"
 #include "led.h"
 #include "stm32h7rs_hal.h"
 #include "stm32h7rs_hal_usart.h"
@@ -21,14 +22,16 @@ typedef struct {
 static trace_entry_t     trace_buffer[TRACE_SIZE];
 static volatile uint16_t trace_index = 0;
 
-#define TX_BUFFER_SIZE 1024
-static uint8_t tx_buffer[TX_BUFFER_SIZE];
-static volatile uint16_t tx_head = 0;
-static volatile uint16_t tx_tail = 0;
-static volatile uint8_t tx_busy = 0;
+static ringbuffer tx_buffer;
+static volatile bool tx_busy = false;
+
+static ringbuffer echo_buffer;
+
+static ringbuffer rx_buffer;
+static uint8_t uart_rx_byte;
+static volatile bool rx_busy = false;
 
 static void print_setup_information();
-static void console_start_transmission(void);
 
 static void print_setup_information()
 {
@@ -41,6 +44,11 @@ static void print_setup_information()
 
 SYS_Status Console_Init()
 {
+    /* Initialize TX & RX Ring buffers */
+    ringbuffer_init(&tx_buffer);
+    ringbuffer_init(&echo_buffer);
+    ringbuffer_init(&rx_buffer);
+
     __HAL_RCC_GPIOD_CLK_ENABLE();
 
     /* Configure PD8 as USART3_TX (AF7) */
@@ -85,9 +93,6 @@ SYS_Status Console_Init()
     usart3.txrxCpltCallback = HAL_USART_txrxCpltCallback;
     usart3.errorCallback    = HAL_USART_errorCallback;
 
-    // **Enable RXNE interrupt directly - don't use HAL_USART_Receive_IT**
-    //USART3->CR1 |= USART_CR1_RXNEIE; // Enable RX interrupt
-
     // Initialize USART
     if (HAL_USART_Init(&usart3) != HAL_OK) {
         Error_Handler();
@@ -98,11 +103,17 @@ SYS_Status Console_Init()
 
     print_setup_information();
 
+    HAL_DelayMS(500);
+
+    // HAL_USART_Receiver_IT(&usart3, &uart_rx_byte, 1);
+
     return SYS_OK;
 }
 
 void Console_Process(void)
 {
+    // Console_Write((char*)echo_buffer.buf, echo_buffer.count);
+
     // Check for complete command
     if (cmd_ready) {
         // Process command
@@ -123,13 +134,13 @@ void Console_Process(void)
         cmd_ready = false;
 
         // Show prompt
-        printf("> ");
+        PRINT_INFO("> ");
     }
 
     // USART Error Handler Check
     for (int i = 0; i < TRACE_SIZE; i++) {
         if (trace_buffer[i].error_code != 0) {
-            printf("[%.3f] Error: 0x%X\r\n", (trace_buffer[i].timestamp / 1000.0f), trace_buffer[i].error_code);
+            PRINT_INFO("[%.3f] Error: 0x%X\r\n", (trace_buffer[i].timestamp / 1000.0f), trace_buffer[i].error_code);
 
             trace_buffer[i].timestamp  = 0;
             trace_buffer[i].error_code = 0;
@@ -143,92 +154,48 @@ int Console_Write(const char *data, int len)
     // Disable interrupts for atomic buffer access
     __disable_irq();
     
-    for (int i = 0; i < len; i++) {
-        uint16_t next_head = (tx_head + 1) % TX_BUFFER_SIZE;
-        
-        // Check if buffer full
-        if (next_head == tx_tail) {
-            __enable_irq();
-            return i; // Return bytes actually queued
-        }
-        
-        tx_buffer[tx_head] = data[i];
-        tx_head = next_head;
-    }
+    ringbuffer_put_many(&tx_buffer, (uint8_t*)data, len);
     
     // Start transmission if idle
     if (!tx_busy) {
-        console_start_transmission();
+        if (tx_buffer.head == tx_buffer.tail) {
+            __enable_irq();
+            return -1; // Nothing to send
+        }
+        
+        tx_busy = 1;
+        // USART3->CR1 &= ~USART_CR1_RXNEIE;
+
+        // Send one byte
+        HAL_USART_Transmit_IT(&usart3, &tx_buffer.buf[tx_buffer.tail], 1);
     }
     
     __enable_irq();
     return len;
 }
 
-static void console_start_transmission(void)
+int Console_Read(char *data, int len)
 {
-    if (tx_head == tx_tail) {
-        return; // Nothing to send
+    if (len <= 0) {
+        return 0;
     }
     
-    tx_busy = 1;
-    USART3->CR1 &= ~USART_CR1_RXNEIE;
+    __disable_irq();
     
-    // Send one byte
-    HAL_USART_Transmit_IT(&usart3, &tx_buffer[tx_tail], 1);
+    int bytes_read = 0;
+    
+    // Read up to 'len' bytes from the ring buffer
+    while (bytes_read < len && rx_buffer.head != rx_buffer.tail) {
+        data[bytes_read++] = ringbuffer_get(&rx_buffer);
+    }
+    
+    __enable_irq();
+    
+    return bytes_read;
 }
 
 void USART3_IRHandler(void)
 {
-    // // ========================================================================
-    // // HANDLE RX OURSELVES (outside HAL state machine)
-    // // ========================================================================
-    // if ((USART3->ISR & USART_ISR_RXNE) && (USART3->CR1 & USART_CR1_RXNEIE)) {
-    //     // Reading RDR clears RXNE automatically
-    //     char received = (char) (USART3->RDR & 0xFF);
-    //
-    //     // Echo character back
-    //     while (!(USART3->ISR & USART_ISR_TXE))
-    //         ;
-    //     USART3->TDR = received;
-    //
-    //     // Process character
-    //     if (received == '\r' || received == '\n') {
-    //         if (cmd_index > 0) {
-    //             cmd_buffer[cmd_index] = '\0';
-    //             cmd_ready             = true;
-    //
-    //             // Send newline
-    //             while (!(USART3->ISR & USART_ISR_TXE))
-    //                 ;
-    //             USART3->TDR = '\r';
-    //             while (!(USART3->ISR & USART_ISR_TXE))
-    //                 ;
-    //             USART3->TDR = '\n';
-    //         }
-    //     } else if (received == '\b' || received == 127) {
-    //         // Backspace
-    //         if (cmd_index > 0) {
-    //             cmd_index--;
-    //             // Erase on terminal
-    //             while (!(USART3->ISR & USART_ISR_TXE))
-    //                 ;
-    //             USART3->TDR = '\b';
-    //             while (!(USART3->ISR & USART_ISR_TXE))
-    //                 ;
-    //             USART3->TDR = ' ';
-    //             while (!(USART3->ISR & USART_ISR_TXE))
-    //                 ;
-    //             USART3->TDR = '\b';
-    //         }
-    //     } else if (received >= 32 && received <= 126) {
-    //         // Printable character
-    //         if (cmd_index < 127) {
-    //             cmd_buffer[cmd_index++] = received;
-    //         }
-    //     }
-    // }
-
     HAL_USART_IRQHandler(&usart3);
 }
 
@@ -236,24 +203,50 @@ void HAL_USART_txCpltCallback(USART_Handle *handle)
 {
     // Transmission complete
     // Led_Toggle(1);
-    tx_tail = (tx_tail + 1) % TX_BUFFER_SIZE;
-    
-    if (tx_head != tx_tail) {
-        // More data waiting
-        HAL_USART_Transmit_IT(&usart3, &tx_buffer[tx_tail], 1);
+    if (tx_buffer.head != tx_buffer.tail) {
+        uint8_t update = ringbuffer_get(&tx_buffer);
+        HAL_USART_Transmit_IT(&usart3, &tx_buffer.buf[tx_buffer.tail], 1);
     } else {
-        // Done
         tx_busy = 0;
-        USART3->CR1 |= USART_CR1_RXNEIE;
+        // USART3->CR1 |= USART_CR1_RXNEIE;
     }
 }
 
 void HAL_USART_rxCpltCallback(USART_Handle *handle)
 {
+    // Read complete
     Led_Toggle(2);
+    ringbuffer_put(&rx_buffer, uart_rx_byte);
+    char received = (char)uart_rx_byte;
+    // char received = (char) (USART3->RDR & 0xFF);
 
-    if (handle->Instance == USART3) {
+    // Process character
+    if (received == '\r' || received == '\n') {
+        if (cmd_index > 0) {
+            cmd_buffer[cmd_index] = '\0';
+            cmd_ready             = true;
+            ringbuffer_put_many(&echo_buffer, (uint8_t*)"/r/n", 2);
+            // Console_Write("\r\n", 2);
+        }
+    } else if (received == '\b' || received == 127) {
+        // Backspace
+        if (cmd_index > 0) {
+            cmd_index--;
+            ringbuffer_put_many(&echo_buffer, (uint8_t*)"\b \b", 3);
+             // Console_Write("\b \b", 3);
+        }
+    } else if (received >= 32 && received <= 126) {
+        // Printable character
+        if (cmd_index < 127) {
+            cmd_buffer[cmd_index++] = received;
+            ringbuffer_put(&echo_buffer, (uint8_t)received);
+            // Console_Write(&received, 1);
+        }
     }
+
+    // Re-arm for next byte
+    handle->State = HAL_USART_STATE_READY;
+    HAL_USART_Receiver_IT(&usart3, &uart_rx_byte, 1);
 }
 
 void HAL_USART_txrxCpltCallback(USART_Handle *handle)

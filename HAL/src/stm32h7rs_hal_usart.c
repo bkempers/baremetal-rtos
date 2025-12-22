@@ -131,13 +131,17 @@ HAL_Status HAL_USART_Transmit(USART_Handle *handle, const uint8_t *txPointer, ui
     const uint8_t *tx_data_8b;
     uint32_t       tickstart;
 
-    if (handle->State == HAL_USART_STATE_READY) {
+    if (handle->State == HAL_USART_STATE_READY || handle->State == HAL_USART_STATE_BUSY_RX) {
         if ((txPointer == NULL) || (size == 0U)) {
             return HAL_ERROR;
         }
 
         handle->errorCode = USART_ERROR_NONE;
-        handle->State     = HAL_USART_STATE_BUSY_TX;
+        if (handle->State == HAL_USART_STATE_READY) {
+            handle->State = HAL_USART_STATE_BUSY_TX;
+        } else if (handle->State == HAL_USART_STATE_BUSY_RX) {
+            handle->State = HAL_USART_STATE_BUSY_TX_RX;
+        }
 
         /* Init tickstart for timeout management */
         tickstart = HAL_GetTick();
@@ -178,7 +182,7 @@ HAL_Status HAL_USART_Receiver_IT(USART_Handle *handle, uint8_t *rxPointer, uint1
 {
     uint16_t nb_dummy_data;
 
-    if (handle->State == HAL_USART_STATE_READY) {
+    if (handle->State == HAL_USART_STATE_READY || handle->State == HAL_USART_STATE_BUSY_TX) {
         if ((rxPointer == NULL) || (size == 0U)) {
             return HAL_ERROR;
         }
@@ -189,7 +193,11 @@ HAL_Status HAL_USART_Receiver_IT(USART_Handle *handle, uint8_t *rxPointer, uint1
         handle->RxISR     = NULL;
 
         handle->errorCode = USART_ERROR_NONE;
-        handle->State     = HAL_USART_STATE_BUSY_RX;
+        if (handle->State == HAL_USART_STATE_READY) {
+            handle->State = HAL_USART_STATE_BUSY_RX;
+        } else if (handle->State == HAL_USART_STATE_BUSY_TX) {
+            handle->State = HAL_USART_STATE_BUSY_TX_RX;
+        }
 
         /* Enable the USART Error Interrupt: (Frame error, noise error, overrun error) */
         SET_BIT(handle->Instance->CR3, USART_CR3_EIE);
