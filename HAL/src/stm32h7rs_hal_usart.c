@@ -131,17 +131,13 @@ HAL_Status HAL_USART_Transmit(USART_Handle *handle, const uint8_t *txPointer, ui
     const uint8_t *tx_data_8b;
     uint32_t       tickstart;
 
-    if (handle->State == HAL_USART_STATE_READY || handle->State == HAL_USART_STATE_BUSY_RX) {
+    if (handle->State == HAL_USART_STATE_READY) {
         if ((txPointer == NULL) || (size == 0U)) {
             return HAL_ERROR;
         }
 
         handle->errorCode = USART_ERROR_NONE;
-        if (handle->State == HAL_USART_STATE_READY) {
-            handle->State = HAL_USART_STATE_BUSY_TX;
-        } else if (handle->State == HAL_USART_STATE_BUSY_RX) {
-            handle->State = HAL_USART_STATE_BUSY_TX_RX;
-        }
+        handle->State = HAL_USART_STATE_READY;
 
         /* Init tickstart for timeout management */
         tickstart = HAL_GetTick();
@@ -240,7 +236,7 @@ HAL_Status HAL_USART_Receiver_IT(USART_Handle *handle, uint8_t *rxPointer, uint1
 
 HAL_Status HAL_USART_Transmit_IT(USART_Handle *handle, const uint8_t *txPointer, uint16_t size)
 {
-    if (handle->State == HAL_USART_STATE_READY) {
+    if (handle->State == HAL_USART_STATE_READY || handle->State == HAL_USART_STATE_BUSY_RX) {
         if ((txPointer == NULL) || (size == 0U)) {
             return HAL_ERROR;
         }
@@ -251,7 +247,11 @@ HAL_Status HAL_USART_Transmit_IT(USART_Handle *handle, const uint8_t *txPointer,
         handle->TxISR     = NULL;
 
         handle->errorCode = USART_ERROR_NONE;
-        handle->State     = HAL_USART_STATE_BUSY_TX;
+        if (handle->State == HAL_USART_STATE_READY) {
+            handle->State = HAL_USART_STATE_BUSY_TX;
+        } else {  // Was BUSY_RX
+            handle->State = HAL_USART_STATE_BUSY_TX_RX;
+        }
 
         /* The USART Error Interrupts: (Frame error, noise error, overrun error)
         are not managed by the USART Transmit Process to avoid the overrun interrupt
@@ -549,13 +549,17 @@ static void usart_end_transmit_it(USART_Handle *handle)
     /* Clear TxISR function pointer */
     handle->TxISR = NULL;
 
-    if (handle->State == HAL_USART_STATE_BUSY_TX) {
+    if (handle->State == HAL_USART_STATE_BUSY_TX || handle->State == HAL_USART_STATE_BUSY_TX_RX) {
         /* Clear overrun flag and discard the received data */
         handle->Instance->ICR = USART_CLEAR_OREF;
         handle->Instance->RQR |= (uint16_t) USART_RQR_RXFRQ;
 
         /* Tx process is completed, restore husart->State to Ready */
-        handle->State = HAL_USART_STATE_READY;
+        if (handle->State == HAL_USART_STATE_BUSY_TX) {
+            handle->State = HAL_USART_STATE_READY;
+        } else if (handle->State == HAL_USART_STATE_BUSY_TX_RX) {
+            handle->State = HAL_USART_STATE_BUSY_RX;  // RX still active
+        }
 
         /* Call registered Tx Complete Callback */
         handle->txCpltCallback(handle);
@@ -564,7 +568,8 @@ static void usart_end_transmit_it(USART_Handle *handle)
         handle->State = HAL_USART_STATE_READY;
 
         /* Call registered Tx Rx Complete Callback */
-        handle->txrxCpltCallback(handle);
+        handle->txCpltCallback(handle);
+        // handle->txrxCpltCallback(handle);
     } else {
         /* Nothing to do */
     }
@@ -592,22 +597,33 @@ static void USART_RxISR_8(USART_Handle *handle)
             /* Clear RxISR function pointer */
             handle->RxISR = NULL;
 
-            /* txftie and txdatacount are temporary variables for MISRAC2012-Rule-13.5 */
-            txftie      = READ_BIT(handle->Instance->CR3, USART_CR3_TXFTIE);
-            txdatacount = handle->txCount;
-
+            /* Update state */
             if (state == HAL_USART_STATE_BUSY_RX) {
-                /* Call register Rx Complete Callback */
-                handle->rxCpltCallback(handle);
-            } else if ((READ_BIT(handle->Instance->CR1, USART_CR1_TCIE) != USART_CR1_TCIE) && (txftie != USART_CR3_TXFTIE) && (txdatacount == 0U)) {
-                /* TxRx process is completed, restore handle->State to Ready */
                 handle->State = HAL_USART_STATE_READY;
-
-                /* Call registered Tx Rx Complete Callback */
-                handle->txrxCpltCallback(handle);
-            } else {
-                /* Nothing to do */
+            } else {  // Was BUSY_TX_RX
+                handle->State = HAL_USART_STATE_BUSY_TX;  // TX still active
             }
+            
+            /* ALWAYS call rxCpltCallback when RX completes */
+            handle->rxCpltCallback(handle);
+            
+            // /* txftie and txdatacount are temporary variables for MISRAC2012-Rule-13.5 */
+            // txftie      = READ_BIT(handle->Instance->CR3, USART_CR3_TXFTIE);
+            // txdatacount = handle->txCount;
+            //
+            // if (state == HAL_USART_STATE_BUSY_RX) {
+            //     /* Call register Rx Complete Callback */
+            //     handle->rxCpltCallback(handle);
+            // } else if ((READ_BIT(handle->Instance->CR1, USART_CR1_TCIE) != USART_CR1_TCIE) && (txftie != USART_CR3_TXFTIE) && (txdatacount == 0U)) {
+            //     /* TxRx process is completed, restore handle->State to Ready */
+            //     handle->State = HAL_USART_STATE_READY;
+            //
+            //     /* Call registered Tx Rx Complete Callback */
+            //     handle->rxCpltCallback(handle);
+            //     // handle->txrxCpltCallback(handle);
+            // } else {
+            //     /* Nothing to do */
+            // }
         } else {
             /* Nothing to do */
         }

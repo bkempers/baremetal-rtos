@@ -57,7 +57,6 @@ bool BME680_Sensor_Init()
         Error_Handler();
     }
 
-    // 4. Enable I2C interrupts in NVIC
     __NVIC_SetPriority(I2C1_EV_IRQn, 5);
     __NVIC_EnableIRQ(I2C1_EV_IRQn);
 

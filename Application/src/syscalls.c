@@ -86,7 +86,8 @@ int _read(int file, char *ptr, int len)
 
     // HAL_USART_Receiver_IT(&usart3, (uint8_t *) ptr, len);
     // HAL_USART_Receive(&usart3, (uint8_t*)ptr, len, 1000);
-    return Console_Read(ptr, len);
+    // return Console_Read(ptr, len);
+    return 0;
 }
 
 /**
