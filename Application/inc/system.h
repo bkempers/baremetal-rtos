@@ -2,6 +2,7 @@
 #define SYSTEM_H
 
 #include "led.h"
+#include "shell_command.h"
 #include "stm32h7rs_hal.h"
 #include "stm32h7rs_hal_rcc.h"
 

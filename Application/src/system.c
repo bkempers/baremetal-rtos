@@ -1,4 +1,26 @@
+#include <stdio.h>
+#include <string.h>
+#include "console.h"
+
 #include "system.h"
+
+static int system_handler(int argc, char **argv) {
+    if (strcmp(argv[1], "info") == 0) {
+        PRINT_INFO("STM32H7RS Serial Console");
+    } else if (strcmp(argv[1], "ver") == 0) {
+        PRINT_INFO("VERSION: %u.%u.%u", MAJOR_VER, MINOR_VER, PATCH_VER);
+    } else if (strcmp(argv[1], "clock") == 0) {
+        PRINT_INFO("CLOCK: %.1f MHz", (SystemCoreClock / 1e6));
+    } else if (strcmp(argv[1], "git") == 0) {
+        PRINT_INFO("GIT BRANCH: %s & HASH: %s", GIT_BRANCH, GIT_COMMIT_SHORT);
+    } else if (strlen(*argv) > 1) {
+        PRINT_INFO("Unknown system argument %s", argv[1]);
+        return 1;
+    }
+
+    return 0;
+}
+SHELL_COMMAND_REGISTER(system, system_handler, "Access system information");
 
 void SystemClock_Config()
 {

@@ -81,6 +81,12 @@ SECTIONS
         PROVIDE_HIDDEN (__fini_array_end = .);
     } > FLASH
 
+    .shell_commands : {
+        PROVIDE(__start_shell_commands = .);
+        KEEP(*(.shell_commands))
+        PROVIDE(__stop_shell_commands = .);
+    } > FLASH
+
     /* Used by the startup to initialize data */
     _sidata = LOADADDR(.data);
 

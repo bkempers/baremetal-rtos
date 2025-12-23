@@ -8,6 +8,7 @@
 #include "stm32h7rs_hal_rcc.h"
 #include "stm32h7rs_hal_usart.h"
 
+#include "shell_command.h"
 #include "git_info.h"
 #include "system.h"
 
@@ -20,6 +21,7 @@
 
 SYS_Status Console_Init();
 void       Console_Process();
+void       Console_Command(char *command);
 
 int Console_Write(const char* data, int len);
 

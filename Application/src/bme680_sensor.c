@@ -38,7 +38,8 @@ bool BME680_Sensor_Init()
 
     /* Configure I2C1 Handler */
     i2c1_handler.Instance              = I2C1;
-    i2c1_handler.Init.Timing           = 0x10707DBC; // 100kHz Standard Mode
+    // i2c1_handler.Init.Timing           = 0x10707DBC; // 100kHz Standard Mode
+    i2c1_handler.Init.Timing = 0x00B03FDB;
     i2c1_handler.Init.OwnAddress1      = 0;
     i2c1_handler.Init.AddressingMode   = I2C_ADDRESSINGMODE_7BIT;
     i2c1_handler.Init.DualAddressMode  = I2C_DUALADDRESS_DISABLE;
@@ -69,7 +70,8 @@ bool BME680_Sensor_Init()
     I2C_Scan();
     
     if (BME680_HAL_Init(&bme680_sensor_handle, &i2c1_handler, BME680_I2C_ADDR_PRIMARY) != BME680_OK) {
-        Error_Handler();
+        PRINT_INFO("Failed to initialize BME680 sensor");
+        return false;
     }
 
     Led_Toggle(2);

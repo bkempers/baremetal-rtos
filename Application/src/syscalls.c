@@ -48,28 +48,8 @@ void *_sbrk(int incr)
  */
 int _write(int file, char *ptr, int len)
 {
-    // For now, just return success
-    // We'll implement UART output later
     (void) file;
     //(void) ptr;
-    //
-    // // Wait for any previous transmission to complete
-    // while (HAL_USART_GetState(&usart3) != HAL_USART_STATE_READY) {
-    //     // Busy wait or timeout
-    // }
-    //
-    // USART3->CR1 &= ~USART_CR1_RXNEIE;
-    // HAL_USART_Transmit_IT(&usart3, (uint8_t *) ptr, len);
-    // // HAL_USART_Transmit(&usart3, (uint8_t*)ptr, len, 1000);
-    // USART3->CR1 |= USART_CR1_RXNEIE;
-    //
-    // // Wait for THIS transmission to complete before returning
-    // while (HAL_USART_GetState(&usart3) != HAL_USART_STATE_READY) {
-    //     // Busy wait
-    // }
-    //
-    // // Return number of bytes "written"
-    // return len;
 
     return Console_Write(ptr, len);
 }
@@ -84,9 +64,6 @@ int _read(int file, char *ptr, int len)
     (void) ptr;
     (void) len;
 
-    // HAL_USART_Receiver_IT(&usart3, (uint8_t *) ptr, len);
-    // HAL_USART_Receive(&usart3, (uint8_t*)ptr, len, 1000);
-    // return Console_Read(ptr, len);
     return 0;
 }
 

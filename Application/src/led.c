@@ -1,10 +1,17 @@
 #include <stdio.h>
 
+#include "shell_command.h"
 #include "console.h"
 #include "led.h"
 #include "stm32h7rs_hal.h"
 #include "stm32h7rs_hal_gpio.h"
 #include "stm32h7rsxx.h"
+
+static int led_handler(int argc, char **argv) {
+    PRINT_INFO("LED command called with %d args", argc);
+    return 0;
+}
+SHELL_COMMAND_REGISTER(led, led_handler, "Control LEDs");
 
 void Led_Init(void)
 {

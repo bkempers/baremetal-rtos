@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 
 #include "console.h"
 #include "ringbuffer.h"
@@ -7,6 +8,8 @@
 #include "stm32h7rs_hal.h"
 #include "stm32h7rs_hal_usart.h"
 #include "system.h"
+
+#define MAX_ARGS 16
 
 // global variables
 USART_Handle         usart3;
@@ -30,6 +33,7 @@ static uint8_t uart_rx_byte;
 static volatile bool rx_busy = false;
 
 static void print_setup_information();
+static int parse_args(char *line, char *argv[], int max_args);
 
 static void print_setup_information()
 {
@@ -38,6 +42,28 @@ static void print_setup_information()
     PRINT_INFO("VERSION: %u.%u.%u", MAJOR_VER, MINOR_VER, PATCH_VER);
     PRINT_INFO("GIT BRANCH: %s & HASH: %s", GIT_BRANCH, GIT_COMMIT_SHORT);
     PRINT_INFO("\n===========================\n");
+}
+
+static int parse_args(char *line, char *argv[], int max_args) {
+    int argc = 0;
+    char *p = line;
+    
+    while (*p && argc < max_args) {
+        // Skip whitespace
+        while (*p && isspace(*p)) p++;
+        if (!*p) break;
+        
+        // Mark argument start
+        argv[argc++] = p;
+        
+        // Find argument end
+        while (*p && !isspace(*p)) p++;
+        
+        // Null-terminate
+        if (*p) *p++ = '\0';
+    }
+    
+    return argc;
 }
 
 SYS_Status Console_Init()
@@ -134,19 +160,8 @@ void Console_Process(void)
 
     // Check for complete command
     if (cmd_ready) {
-        // Process command
-        if (strcmp(cmd_buffer, "system") == 0) {
-            PRINT_INFO("STM32H7RS Serial Console");
-        } else if (strcmp(cmd_buffer, "ver") == 0) {
-            PRINT_INFO("VERSION: %u.%u.%u", MAJOR_VER, MINOR_VER, PATCH_VER);
-        } else if (strcmp(cmd_buffer, "clock") == 0) {
-            PRINT_INFO("CLOCK: %.1f MHz", (SystemCoreClock / 1e6));
-        } else if (strcmp(cmd_buffer, "git") == 0) {
-            PRINT_INFO("GIT BRANCH: %s & HASH: %s", GIT_BRANCH, GIT_COMMIT_SHORT);
-        } else if (strlen(cmd_buffer) > 0) {
-            PRINT_INFO("Unknown: %s", cmd_buffer);
-        }
-
+        Console_Command(cmd_buffer);
+        
         // Reset for next command
         cmd_index = 0;
         cmd_ready = false;
@@ -162,6 +177,33 @@ void Console_Process(void)
         }
     }
     trace_index = 0;
+}
+
+void Console_Command(char *command) {
+    if (strcmp(command, "help") == 0) {
+        PRINT_INFO("Available commands:");
+        for (shell_command_t *cmd = &__start_shell_commands; 
+             cmd < &__stop_shell_commands; 
+             cmd++) {
+            PRINT_INFO("  %-10s - %s", cmd->name, cmd->help);
+        }
+        return;
+    }
+
+    char *argv[MAX_ARGS];
+    int argc = parse_args(command, argv, MAX_ARGS);
+
+    for (shell_command_t *cmd = &__start_shell_commands; 
+         cmd < &__stop_shell_commands; 
+         cmd++) {
+        
+        if (strcmp(cmd->name, command) == 0) {
+            cmd->handler(argc, argv);
+            return;
+        }
+    }
+
+    PRINT_INFO("Command not found: %s", command);
 }
 
 int Console_Write(const char *data, int len)
@@ -222,7 +264,6 @@ void HAL_USART_txrxCpltCallback(USART_Handle *handle)
 
 void HAL_USART_errorCallback(USART_Handle *handle)
 {
-    // Error_Handler();
     Led_Toggle(3);
 
     trace_buffer[trace_index].timestamp  = HAL_GetTick();
