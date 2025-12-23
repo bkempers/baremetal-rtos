@@ -18,28 +18,28 @@ bool BME680_Sensor_Init()
 
     /* Configure PB8 I2C */
     GPIO_Init i2c1_gpio_scl = {0};
-    i2c1_gpio_scl.Pin       = GPIO_PIN_8; // PB8=SCL
-    i2c1_gpio_scl.Mode      = GPIO_MODE_ALT_FUNC_OD;   // Alternate function, open-drain
-    i2c1_gpio_scl.Pull      = GPIO_NOPULL_UP;          // No internal pull-ups (external on BME680 board)
-    i2c1_gpio_scl.Speed     = GPIO_SPEED_FREQ_HIGH;    // High speed
-    i2c1_gpio_scl.Alternate = ((uint8_t) 0x04);        // AF4 = I2C1
+    i2c1_gpio_scl.Pin       = GPIO_PIN_8;            // PB8=SCL
+    i2c1_gpio_scl.Mode      = GPIO_MODE_ALT_FUNC_OD; // Alternate function, open-drain
+    i2c1_gpio_scl.Pull      = GPIO_NOPULL_UP;        // No internal pull-ups (external on BME680 board)
+    i2c1_gpio_scl.Speed     = GPIO_SPEED_FREQ_HIGH;  // High speed
+    i2c1_gpio_scl.Alternate = ((uint8_t) 0x04);      // AF4 = I2C1
     HAL_GPIO_Init(GPIOB, &i2c1_gpio_scl);
 
     /* Configure PB9 as I2C */
     GPIO_Init i2c1_gpio_sda = {0};
-    i2c1_gpio_sda.Pin       = GPIO_PIN_9; // PB9=SDA
-    i2c1_gpio_sda.Mode      = GPIO_MODE_ALT_FUNC_OD;   // Alternate function, open-drain
-    i2c1_gpio_sda.Pull      = GPIO_NOPULL_UP;          // No internal pull-ups (external on BME680 board)
-    i2c1_gpio_sda.Speed     = GPIO_SPEED_FREQ_HIGH;    // High speed
-    i2c1_gpio_sda.Alternate = ((uint8_t) 0x04);        // AF4 = I2C1
+    i2c1_gpio_sda.Pin       = GPIO_PIN_9;            // PB9=SDA
+    i2c1_gpio_sda.Mode      = GPIO_MODE_ALT_FUNC_OD; // Alternate function, open-drain
+    i2c1_gpio_sda.Pull      = GPIO_NOPULL_UP;        // No internal pull-ups (external on BME680 board)
+    i2c1_gpio_sda.Speed     = GPIO_SPEED_FREQ_HIGH;  // High speed
+    i2c1_gpio_sda.Alternate = ((uint8_t) 0x04);      // AF4 = I2C1
     HAL_GPIO_Init(GPIOB, &i2c1_gpio_sda);
 
     __HAL_RCC_I2C1_CLK_ENABLE();
 
     /* Configure I2C1 Handler */
-    i2c1_handler.Instance              = I2C1;
+    i2c1_handler.Instance = I2C1;
     // i2c1_handler.Init.Timing           = 0x10707DBC; // 100kHz Standard Mode
-    i2c1_handler.Init.Timing = 0x00B03FDB;
+    i2c1_handler.Init.Timing           = 0x00B03FDB;
     i2c1_handler.Init.OwnAddress1      = 0;
     i2c1_handler.Init.AddressingMode   = I2C_ADDRESSINGMODE_7BIT;
     i2c1_handler.Init.DualAddressMode  = I2C_DUALADDRESS_DISABLE;
@@ -50,9 +50,9 @@ bool BME680_Sensor_Init()
 
     i2c1_handler.masterTxCpltCallback = BME680_HAL_I2C_TxCpltCallback;
     i2c1_handler.masterRxCpltCallback = BME680_HAL_I2C_RxCpltCallback;
-    i2c1_handler.memTxCpltCallback = BME680_HAL_I2C_TxCpltCallback;
-    i2c1_handler.memRxCpltCallback = BME680_HAL_I2C_RxCpltCallback;
-    i2c1_handler.errorCallback = BME680_HAL_I2C_ErrorCallback;
+    i2c1_handler.memTxCpltCallback    = BME680_HAL_I2C_TxCpltCallback;
+    i2c1_handler.memRxCpltCallback    = BME680_HAL_I2C_RxCpltCallback;
+    i2c1_handler.errorCallback        = BME680_HAL_I2C_ErrorCallback;
 
     if (HAL_I2C_Init(&i2c1_handler) != HAL_OK) {
         Error_Handler();
@@ -64,11 +64,11 @@ bool BME680_Sensor_Init()
     __NVIC_SetPriority(I2C1_ER_IRQn, 5);
     __NVIC_EnableIRQ(I2C1_ER_IRQn);
 
-    HAL_DelayMS(200);  // Longer delay
-    
+    HAL_DelayMS(200); // Longer delay
+
     // Scan for devices
     I2C_Scan();
-    
+
     if (BME680_HAL_Init(&bme680_sensor_handle, &i2c1_handler, BME680_I2C_ADDR_PRIMARY) != BME680_OK) {
         PRINT_INFO("Failed to initialize BME680 sensor");
         return false;
@@ -113,11 +113,11 @@ void BME680_HAL_I2C_ErrorCallback(I2C_Handle *handle)
 static void I2C_Scan(void)
 {
     PRINT_INFO("Scanning I2C bus...");
-    
+
     for (uint8_t addr = 0x76; addr < 0x7F; addr++) {
         i2c_tx_complete = false;
-        i2c_error = false;
-        
+        i2c_error       = false;
+
         // Try to send just the address (0-byte write)
         uint8_t dummy = 0;
         if (HAL_I2C_Master_TX_IT(&i2c1_handler, addr << 1, &dummy, 0) == HAL_OK) {
@@ -125,15 +125,15 @@ static void I2C_Scan(void)
             while (!i2c_tx_complete && !i2c_error && HAL_GetTick() < timeout) {
                 // Wait
             }
-            
+
             if (!i2c_error) {
                 PRINT_INFO("  Found device at 0x%02X", addr);
             }
         }
-        
-        HAL_DelayMS(2);  // Small delay between scans
+
+        HAL_DelayMS(2); // Small delay between scans
     }
-    
+
     PRINT_INFO("I2C scan complete");
 }
 
@@ -162,8 +162,8 @@ static BME680_INTF_RET_TYPE bme68x_i2c_read_it(uint8_t reg_addr, uint8_t *reg_da
 
     PRINT_INFO("I2C Read: reg=0x%02X, len=%u", reg_addr, len);
 
-    i2c_rx_complete = false;
-    i2c_error       = false;
+    i2c_rx_complete   = false;
+    i2c_error         = false;
     HAL_Status status = HAL_I2C_Mem_Read_IT(handle->hi2c, handle->i2c_addr << 1, reg_addr, I2C_MEMADD_SIZE_8BIT, reg_data, len);
 
     if (status != HAL_OK) {
@@ -186,7 +186,7 @@ static BME680_INTF_RET_TYPE bme68x_i2c_read_it(uint8_t reg_addr, uint8_t *reg_da
         PRINT_ERROR("I2C Read error: 0x%08u", handle->hi2c->ErrorCode);
         return BME680_E_COM_FAIL;
     }
-    
+
     PRINT_INFO("I2C Read success, data[0]=0x%02X", reg_data[0]);
     return BME680_OK;
 }
@@ -237,7 +237,7 @@ int8_t BME680_HAL_Init(BME680_Handle *handle, I2C_Handle *hi2c, uint8_t i2c_addr
     handle->bme_dev.intf     = BME680_I2C_INTF;
     handle->bme_dev.intf_ptr = handle; // Pass handle, not just I2C
     handle->bme_dev.amb_temp = 25;
-    
+
     Led_Toggle(1);
     result = bme68x_init(&handle->bme_dev);
     Led_Toggle(3);
@@ -316,10 +316,10 @@ BME680_StateTypeDef BME680_HAL_Process(BME680_Handle *handle)
         result = bme68x_set_op_mode(BME680_FORCED_MODE, &handle->bme_dev);
         if (result == BME680_OK) {
             handle->measurement_start_tick = HAL_GetTick();
-            handle->state = BME680_STATE_WAITING_MEASUREMENT;
+            handle->state                  = BME680_STATE_WAITING_MEASUREMENT;
         } else {
             handle->error_code = result;
-            handle->state = BME680_STATE_ERROR;
+            handle->state      = BME680_STATE_ERROR;
         }
         break;
 

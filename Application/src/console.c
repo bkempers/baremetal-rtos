@@ -1,10 +1,10 @@
+#include <ctype.h>
 #include <stdio.h>
 #include <string.h>
-#include <ctype.h>
 
 #include "console.h"
-#include "ringbuffer.h"
 #include "led.h"
+#include "ringbuffer.h"
 #include "stm32h7rs_hal.h"
 #include "stm32h7rs_hal_usart.h"
 #include "system.h"
@@ -25,46 +25,16 @@ typedef struct {
 static trace_entry_t     trace_buffer[TRACE_SIZE];
 static volatile uint16_t trace_index = 0;
 
-static ringbuffer tx_buffer;
+static ringbuffer    tx_buffer;
 static volatile bool tx_busy = false;
 
-static ringbuffer rx_buffer;
-static uint8_t uart_rx_byte;
+static ringbuffer    rx_buffer;
+static uint8_t       uart_rx_byte;
 static volatile bool rx_busy = false;
 
 static void print_setup_information();
-static int parse_args(char *line, char *argv[], int max_args);
-
-static void print_setup_information()
-{
-    PRINT_INFO("\n===========================");
-    PRINT_INFO("STM32H7RS Serial Console");
-    PRINT_INFO("VERSION: %u.%u.%u", MAJOR_VER, MINOR_VER, PATCH_VER);
-    PRINT_INFO("GIT BRANCH: %s & HASH: %s", GIT_BRANCH, GIT_COMMIT_SHORT);
-    PRINT_INFO("\n===========================\n");
-}
-
-static int parse_args(char *line, char *argv[], int max_args) {
-    int argc = 0;
-    char *p = line;
-    
-    while (*p && argc < max_args) {
-        // Skip whitespace
-        while (*p && isspace(*p)) p++;
-        if (!*p) break;
-        
-        // Mark argument start
-        argv[argc++] = p;
-        
-        // Find argument end
-        while (*p && !isspace(*p)) p++;
-        
-        // Null-terminate
-        if (*p) *p++ = '\0';
-    }
-    
-    return argc;
-}
+static int  parse_args(char *line, char *argv[], int max_args);
+static void process_rx_buffer();
 
 SYS_Status Console_Init()
 {
@@ -133,38 +103,17 @@ SYS_Status Console_Init()
 
 void Console_Process(void)
 {
-    while (rx_buffer.head != rx_buffer.tail) {
-        char received = (char)ringbuffer_get(&rx_buffer);
-
-        // Process character
-        if (received == '\r' || received == '\n') {
-            if (cmd_index > 0) {
-                cmd_buffer[cmd_index] = '\0';
-                cmd_ready             = true;
-                Console_Write("\r\n", 2);
-            }
-        } else if (received == '\b' || received == 127) {
-            // Backspace
-            if (cmd_index > 0) {
-                cmd_index--;
-                Console_Write("\b \b", 3);
-            }
-        } else if (received >= 32 && received <= 126) {
-            // Printable character
-            if (cmd_index < 127) {
-                cmd_buffer[cmd_index++] = received;
-                Console_Write(&received, 1);
-            }
-        }
-    }
+    process_rx_buffer();
 
     // Check for complete command
     if (cmd_ready) {
         Console_Command(cmd_buffer);
-        
+
         // Reset for next command
         cmd_index = 0;
         cmd_ready = false;
+
+        Console_Write("sh> ", 4);
     }
 
     // USART Error Handler Check
@@ -179,24 +128,20 @@ void Console_Process(void)
     trace_index = 0;
 }
 
-void Console_Command(char *command) {
+void Console_Command(char *command)
+{
     if (strcmp(command, "help") == 0) {
         PRINT_INFO("Available commands:");
-        for (shell_command_t *cmd = &__start_shell_commands; 
-             cmd < &__stop_shell_commands; 
-             cmd++) {
+        for (shell_command_t *cmd = &__start_shell_commands; cmd < &__stop_shell_commands; cmd++) {
             PRINT_INFO("  %-10s - %s", cmd->name, cmd->help);
         }
         return;
     }
 
     char *argv[MAX_ARGS];
-    int argc = parse_args(command, argv, MAX_ARGS);
+    int   argc = parse_args(command, argv, MAX_ARGS);
 
-    for (shell_command_t *cmd = &__start_shell_commands; 
-         cmd < &__stop_shell_commands; 
-         cmd++) {
-        
+    for (shell_command_t *cmd = &__start_shell_commands; cmd < &__stop_shell_commands; cmd++) {
         if (strcmp(cmd->name, command) == 0) {
             cmd->handler(argc, argv);
             return;
@@ -210,21 +155,21 @@ int Console_Write(const char *data, int len)
 {
     // Disable interrupts for atomic buffer access
     __disable_irq();
-    
-    ringbuffer_put_many(&tx_buffer, (uint8_t*)data, len);
-    
+
+    ringbuffer_put_many(&tx_buffer, (uint8_t *) data, len);
+
     // Start transmission if idle
     if (!tx_busy) {
         if (tx_buffer.head == tx_buffer.tail) {
             __enable_irq();
             return -1; // Nothing to send
         }
-        
-        tx_busy = 1;
+
+        tx_busy        = 1;
         uint8_t update = ringbuffer_get(&tx_buffer);
         HAL_USART_Transmit_IT(&usart3, &update, 1);
     }
-    
+
     __enable_irq();
     return len;
 }
@@ -245,7 +190,7 @@ void HAL_USART_txCpltCallback(USART_Handle *handle)
         if (handle->State == HAL_USART_STATE_BUSY_TX) {
             handle->State = HAL_USART_STATE_READY;
         } else if (handle->State == HAL_USART_STATE_BUSY_TX_RX) {
-            handle->State = HAL_USART_STATE_BUSY_RX;  // RX still active
+            handle->State = HAL_USART_STATE_BUSY_RX; // RX still active
         }
     }
 }
@@ -279,4 +224,68 @@ void HAL_USART_errorCallback(USART_Handle *handle)
 
     Led_Toggle(3);
     return;
+}
+
+static void print_setup_information()
+{
+    PRINT_INFO("\n===========================");
+    PRINT_INFO("STM32H7RS Serial Console");
+    PRINT_INFO("VERSION: %u.%u.%u", MAJOR_VER, MINOR_VER, PATCH_VER);
+    PRINT_INFO("GIT BRANCH: %s & HASH: %s", GIT_BRANCH, GIT_COMMIT_SHORT);
+    PRINT_INFO("\n===========================\n");
+}
+
+static int parse_args(char *line, char *argv[], int max_args)
+{
+    int   argc = 0;
+    char *p    = line;
+
+    while (*p && argc < max_args) {
+        // Skip whitespace
+        while (*p && isspace(*p))
+            p++;
+        if (!*p)
+            break;
+
+        // Mark argument start
+        argv[argc++] = p;
+
+        // Find argument end
+        while (*p && !isspace(*p))
+            p++;
+
+        // Null-terminate
+        if (*p)
+            *p++ = '\0';
+    }
+
+    return argc;
+}
+
+static void process_rx_buffer()
+{
+    while (rx_buffer.head != rx_buffer.tail) {
+        char received = (char) ringbuffer_get(&rx_buffer);
+
+        // Process character
+        if (received == '\r' || received == '\n') {
+            if (cmd_index > 0) {
+                cmd_buffer[cmd_index] = '\0';
+                cmd_ready             = true;
+                Console_Write("\r\n", 2);
+            }
+        } else if (received == '\b' || received == 127) {
+            // Backspace
+            if (cmd_index > 0) {
+                cmd_index--;
+                Console_Write("\b \b", 3);
+            }
+        } else if (received >= 32 && received <= 126) {
+            // Printable character
+            if (cmd_index < 127) {
+                cmd_buffer[cmd_index++] = received;
+                Console_Write(&received, 1);
+            }
+        }
+    }
 }

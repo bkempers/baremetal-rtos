@@ -441,10 +441,15 @@ static void I2C_TransferConfig(I2C_Handle *handle, uint16_t DevAddress, uint8_t 
     uint32_t tmp;
 
     /* Declaration of tmp to prevent undefined behavior of volatile usage */
-    tmp = ((uint32_t) (((uint32_t) DevAddress & I2C_CR2_SADD) | (((uint32_t) Size << I2C_CR2_NBYTES_Pos) & I2C_CR2_NBYTES) | (uint32_t) Mode | (uint32_t) Request) & (~0x80000000U));
+    tmp = ((uint32_t) (((uint32_t) DevAddress & I2C_CR2_SADD) | (((uint32_t) Size << I2C_CR2_NBYTES_Pos) & I2C_CR2_NBYTES) | (uint32_t) Mode |
+                       (uint32_t) Request) &
+           (~0x80000000U));
 
     /* update CR2 register */
-    MODIFY_REG(handle->Instance->CR2, ((I2C_CR2_SADD | I2C_CR2_NBYTES | I2C_CR2_RELOAD | I2C_CR2_AUTOEND | (I2C_CR2_RD_WRN & (uint32_t) (Request >> (31U - I2C_CR2_RD_WRN_Pos))) | I2C_CR2_START | I2C_CR2_STOP)), tmp);
+    MODIFY_REG(handle->Instance->CR2,
+               ((I2C_CR2_SADD | I2C_CR2_NBYTES | I2C_CR2_RELOAD | I2C_CR2_AUTOEND |
+                 (I2C_CR2_RD_WRN & (uint32_t) (Request >> (31U - I2C_CR2_RD_WRN_Pos))) | I2C_CR2_START | I2C_CR2_STOP)),
+               tmp);
 }
 
 static HAL_Status I2C_Master_ISR_IT(struct __I2C_Handle *handle, uint32_t ITFlags, uint32_t ITSources)
@@ -574,60 +579,52 @@ static void I2C_Enable_IRQ(I2C_Handle *handle, uint16_t InterruptRequest)
 
 static void I2C_Disable_IRQ(I2C_Handle *handle, uint16_t InterruptRequest)
 {
-  uint32_t tmpisr = 0U;
+    uint32_t tmpisr = 0U;
 
-  if ((InterruptRequest & I2C_XFER_TX_IT) == I2C_XFER_TX_IT)
-  {
-    /* Disable TC and TXI interrupts */
-    tmpisr |= I2C_CR1_TCIE | I2C_CR1_TXIE;
+    if ((InterruptRequest & I2C_XFER_TX_IT) == I2C_XFER_TX_IT) {
+        /* Disable TC and TXI interrupts */
+        tmpisr |= I2C_CR1_TCIE | I2C_CR1_TXIE;
 
-    if (((uint32_t)handle->State & (uint32_t)HAL_I2C_STATE_LISTEN) != (uint32_t)HAL_I2C_STATE_LISTEN)
-    {
-      /* Disable NACK and STOP interrupts */
-      tmpisr |= I2C_CR1_STOPIE | I2C_CR1_NACKIE | I2C_CR1_ERRIE;
+        if (((uint32_t) handle->State & (uint32_t) HAL_I2C_STATE_LISTEN) != (uint32_t) HAL_I2C_STATE_LISTEN) {
+            /* Disable NACK and STOP interrupts */
+            tmpisr |= I2C_CR1_STOPIE | I2C_CR1_NACKIE | I2C_CR1_ERRIE;
+        }
     }
-  }
 
-  if ((InterruptRequest & I2C_XFER_RX_IT) == I2C_XFER_RX_IT)
-  {
-    /* Disable TC and RXI interrupts */
-    tmpisr |= I2C_CR1_TCIE | I2C_CR1_RXIE;
+    if ((InterruptRequest & I2C_XFER_RX_IT) == I2C_XFER_RX_IT) {
+        /* Disable TC and RXI interrupts */
+        tmpisr |= I2C_CR1_TCIE | I2C_CR1_RXIE;
 
-    if (((uint32_t)handle->State & (uint32_t)HAL_I2C_STATE_LISTEN) != (uint32_t)HAL_I2C_STATE_LISTEN)
-    {
-      /* Disable NACK and STOP interrupts */
-      tmpisr |= I2C_CR1_STOPIE | I2C_CR1_NACKIE | I2C_CR1_ERRIE;
+        if (((uint32_t) handle->State & (uint32_t) HAL_I2C_STATE_LISTEN) != (uint32_t) HAL_I2C_STATE_LISTEN) {
+            /* Disable NACK and STOP interrupts */
+            tmpisr |= I2C_CR1_STOPIE | I2C_CR1_NACKIE | I2C_CR1_ERRIE;
+        }
     }
-  }
 
-  if ((InterruptRequest & I2C_XFER_LISTEN_IT) == I2C_XFER_LISTEN_IT)
-  {
-    /* Disable ADDR, NACK and STOP interrupts */
-    tmpisr |= I2C_CR1_ADDRIE | I2C_CR1_STOPIE | I2C_CR1_NACKIE | I2C_CR1_ERRIE;
-  }
+    if ((InterruptRequest & I2C_XFER_LISTEN_IT) == I2C_XFER_LISTEN_IT) {
+        /* Disable ADDR, NACK and STOP interrupts */
+        tmpisr |= I2C_CR1_ADDRIE | I2C_CR1_STOPIE | I2C_CR1_NACKIE | I2C_CR1_ERRIE;
+    }
 
-  if (InterruptRequest == I2C_XFER_ERROR_IT)
-  {
-    /* Enable ERR and NACK interrupts */
-    tmpisr |= I2C_CR1_ERRIE | I2C_CR1_NACKIE;
-  }
+    if (InterruptRequest == I2C_XFER_ERROR_IT) {
+        /* Enable ERR and NACK interrupts */
+        tmpisr |= I2C_CR1_ERRIE | I2C_CR1_NACKIE;
+    }
 
-  if (InterruptRequest == I2C_XFER_CPLT_IT)
-  {
-    /* Enable STOP interrupts */
-    tmpisr |= I2C_CR1_STOPIE;
-  }
+    if (InterruptRequest == I2C_XFER_CPLT_IT) {
+        /* Enable STOP interrupts */
+        tmpisr |= I2C_CR1_STOPIE;
+    }
 
-  if (InterruptRequest == I2C_XFER_RELOAD_IT)
-  {
-    /* Enable TC interrupts */
-    tmpisr |= I2C_CR1_TCIE;
-  }
+    if (InterruptRequest == I2C_XFER_RELOAD_IT) {
+        /* Enable TC interrupts */
+        tmpisr |= I2C_CR1_TCIE;
+    }
 
-  /* Disable interrupts only at the end */
-  /* to avoid a breaking situation like at "t" time */
-  /* all disable interrupts request are not done */
-  handle->Instance->CR1 &= ~(tmpisr);
+    /* Disable interrupts only at the end */
+    /* to avoid a breaking situation like at "t" time */
+    /* all disable interrupts request are not done */
+    handle->Instance->CR1 &= ~(tmpisr);
 }
 
 // HAL_Status HAL_I2C_Slave_TX_IT(I2C_Handle *handle, uint8_t *ptrData, uint16_t Size);

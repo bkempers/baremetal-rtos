@@ -137,7 +137,7 @@ HAL_Status HAL_USART_Transmit(USART_Handle *handle, const uint8_t *txPointer, ui
         }
 
         handle->errorCode = USART_ERROR_NONE;
-        handle->State = HAL_USART_STATE_READY;
+        handle->State     = HAL_USART_STATE_READY;
 
         /* Init tickstart for timeout management */
         tickstart = HAL_GetTick();
@@ -249,7 +249,7 @@ HAL_Status HAL_USART_Transmit_IT(USART_Handle *handle, const uint8_t *txPointer,
         handle->errorCode = USART_ERROR_NONE;
         if (handle->State == HAL_USART_STATE_READY) {
             handle->State = HAL_USART_STATE_BUSY_TX;
-        } else {  // Was BUSY_RX
+        } else { // Was BUSY_RX
             handle->State = HAL_USART_STATE_BUSY_TX_RX;
         }
 
@@ -558,7 +558,7 @@ static void usart_end_transmit_it(USART_Handle *handle)
         if (handle->State == HAL_USART_STATE_BUSY_TX) {
             handle->State = HAL_USART_STATE_READY;
         } else if (handle->State == HAL_USART_STATE_BUSY_TX_RX) {
-            handle->State = HAL_USART_STATE_BUSY_RX;  // RX still active
+            handle->State = HAL_USART_STATE_BUSY_RX; // RX still active
         }
 
         /* Call registered Tx Complete Callback */
@@ -600,13 +600,13 @@ static void USART_RxISR_8(USART_Handle *handle)
             /* Update state */
             if (state == HAL_USART_STATE_BUSY_RX) {
                 handle->State = HAL_USART_STATE_READY;
-            } else {  // Was BUSY_TX_RX
-                handle->State = HAL_USART_STATE_BUSY_TX;  // TX still active
+            } else {                                     // Was BUSY_TX_RX
+                handle->State = HAL_USART_STATE_BUSY_TX; // TX still active
             }
-            
+
             /* ALWAYS call rxCpltCallback when RX completes */
             handle->rxCpltCallback(handle);
-            
+
             // /* txftie and txdatacount are temporary variables for MISRAC2012-Rule-13.5 */
             // txftie      = READ_BIT(handle->Instance->CR3, USART_CR3_TXFTIE);
             // txdatacount = handle->txCount;
@@ -614,7 +614,8 @@ static void USART_RxISR_8(USART_Handle *handle)
             // if (state == HAL_USART_STATE_BUSY_RX) {
             //     /* Call register Rx Complete Callback */
             //     handle->rxCpltCallback(handle);
-            // } else if ((READ_BIT(handle->Instance->CR1, USART_CR1_TCIE) != USART_CR1_TCIE) && (txftie != USART_CR3_TXFTIE) && (txdatacount == 0U)) {
+            // } else if ((READ_BIT(handle->Instance->CR1, USART_CR1_TCIE) != USART_CR1_TCIE) && (txftie != USART_CR3_TXFTIE) && (txdatacount == 0U))
+            // {
             //     /* TxRx process is completed, restore handle->State to Ready */
             //     handle->State = HAL_USART_STATE_READY;
             //
@@ -756,7 +757,7 @@ static void USART_TxISR_8FIFO(USART_Handle *handle)
 
 HAL_USART_State HAL_USART_GetState(const USART_Handle *handle)
 {
-  return handle->State;
+    return handle->State;
 }
 
 void usart_enable_interrupt(USART_Handle *handle, uint32_t interrupt)

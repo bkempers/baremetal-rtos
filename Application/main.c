@@ -24,13 +24,14 @@ int main(void)
         Scheduler_AddTask(BME680_Sensor_Task, 100);
         Scheduler_AddTask(BME680_Read_Trigger, 2000);
     }
-    
+
     Led_Reset();
     Scheduler_AddTask(Led_Cycle, 1000);
     Scheduler_AddTask(Console_Process, 25);
     Task_Scheduler_Init();
 
-    while (1) {}
+    while (1) {
+    }
 
     return 1;
 }

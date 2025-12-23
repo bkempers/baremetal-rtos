@@ -1,17 +1,66 @@
 #include <stdio.h>
+#include <string.h>
 
-#include "shell_command.h"
 #include "console.h"
 #include "led.h"
+#include "shell_command.h"
 #include "stm32h7rs_hal.h"
 #include "stm32h7rs_hal_gpio.h"
 #include "stm32h7rsxx.h"
 
-static int led_handler(int argc, char **argv) {
-    PRINT_INFO("LED command called with %d args", argc);
+static void system_usage()
+{
+    PRINT_INFO("LED module usage: \r\n \
+        - status: Get LED module status \r\n \
+        - toggle: Toggle specific LED (green, yellow, red) \r\n \
+        - cycle: Run the LED cycle program \r\n \
+        - reset: Reset state of LEDs \r\n");
+}
+
+static int led_handler(int argc, char **argv)
+{
+    if (argc < 2) {
+        system_usage();
+        return 1;
+    }
+
+    if (strcmp(argv[1], "status") == 0) {
+        PRINT_INFO("led status");
+        return 0;
+    }
+
+    if (strcmp(argv[1], "toggle") == 0) {
+        if (strcmp(argv[2], "green") == 0) {
+            Led_Toggle(1);
+        } else if (strcmp(argv[2], "yellow") == 0) {
+            Led_Toggle(2);
+        } else if (strcmp(argv[2], "red") == 0) {
+            Led_Toggle(3);
+        } else {
+            PRINT_INFO("Didn't specify any correct LED color.");
+            return 1;
+        }
+        return 0;
+    }
+
+    if (strcmp(argv[1], "cycle") == 0) {
+        Led_Cycle();
+        return 0;
+    }
+
+    if (strcmp(argv[1], "reset") == 0) {
+        Led_Reset();
+        return 0;
+    }
+
+    if (strlen(*argv) > 2) {
+        PRINT_INFO("Unknown system argument %s", argv[1]);
+        return 1;
+    }
+
     return 0;
 }
-SHELL_COMMAND_REGISTER(led, led_handler, "Control LEDs");
+SHELL_COMMAND_REGISTER(led, led_handler, "LED Module");
 
 void Led_Init(void)
 {

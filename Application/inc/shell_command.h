@@ -8,13 +8,9 @@ typedef struct {
 } shell_command_t;
 
 // Macro to register commands
-#define SHELL_COMMAND_REGISTER(cmd_name, func, help_text) \
-    static const shell_command_t __cmd_##cmd_name \
-    __attribute__((section(".shell_commands"), used)) = { \
-        .name = #cmd_name, \
-        .handler = func, \
-        .help = help_text \
-    };
+#define SHELL_COMMAND_REGISTER(cmd_name, func, help_text)                                                                                            \
+    static const shell_command_t __cmd_##cmd_name                                                                                                    \
+        __attribute__((section(".shell_commands"), used)) = {.name = #cmd_name, .handler = func, .help = help_text};
 
 // Symbols provided by linker script
 extern shell_command_t __start_shell_commands;

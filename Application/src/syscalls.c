@@ -6,8 +6,8 @@
 #include <sys/types.h>
 
 // locals
-#include "stm32h7rs_hal_usart.h"
 #include "console.h"
+#include "stm32h7rs_hal_usart.h"
 
 extern USART_Handle usart3;
 
