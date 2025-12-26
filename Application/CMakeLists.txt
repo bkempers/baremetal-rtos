@@ -79,7 +79,7 @@ set_source_files_properties(
 set(STM32_PROG "/Applications/STMicroelectronics/STM32Cube/STM32CubeProgrammer/STM32CubeProgrammer.app/Contents/MacOs/bin/STM32_Programmer_CLI")
 
 add_custom_target(flash
-    COMMAND ${STM32_PROG} -c port=SWD freq=4000 mode=UR reset=HWrst -w ${PROJECT_NAME}.elf -v -rst -q
+    COMMAND ${STM32_PROG} -c port=SWD freq=950 mode=UR reset=HWrst -w ${PROJECT_NAME}.elf -v -rst -q
     DEPENDS ${PROJECT_NAME}.elf
     COMMENT "Flashing ${PROJECT_NAME}.elf"
 )
@@ -87,6 +87,14 @@ add_custom_target(flash
 add_custom_target(erase
     COMMAND ${STM32_PROG} -c port=SWD -e all
     COMMENT "Erasing flash"
+)
+
+# OpenOCD flash target
+add_custom_target(openocd_flash
+    COMMAND openocd -f ${CMAKE_SOURCE_DIR}/openocd.cfg -c "program ${PROJECT_NAME}.elf verify reset exit"
+    DEPENDS ${PROJECT_NAME}.elf
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    COMMENT "Flashing with OpenOCD: ${PROJECT_NAME}.elf"
 )
 
 set(STLINK_GDBSERVER "/Applications/STM32CubeIDE.app/Contents/Eclipse/plugins/com.st.stm32cube.ide.mcu.externaltools.stlink-gdb-server.macos64_2.2.200.202505060755/tools/bin/ST-LINK_gdbserver")

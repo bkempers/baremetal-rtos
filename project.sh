@@ -67,6 +67,7 @@ Commands:
     serial          Connect to STM32 board via serial (default: 115200 baud)
     info            Show microcontroller info
     format          Auto-format code
+    check           Run static analyzer
     release         Build in release mode
     help            Show this help message
 
@@ -132,11 +133,9 @@ rebuild() {
 
 # Flash to target
 flash() {
-    print_msg "Building before flash..."
-    build_project $1
-    
     print_msg "Flashing to target..."
     cmake --build ${BUILD_DIR} --target flash || { print_error "Flash failed"; exit 1; }
+    show_size
     print_msg "Flash complete!"
 }
 
@@ -264,6 +263,14 @@ format_code() {
 
 }
 
+# cppcheck Static analyzer
+check_code() {
+    echo "Running cppcheck static analyzer"
+    
+    cppcheck --quiet -I Application/ -I HAL/ -I rtos/ .
+}
+
+
 # Build in release mode
 build_release() {
     BUILD_TYPE="Release"
@@ -330,6 +337,9 @@ case ${COMMAND} in
         ;;
     format)
         format_code
+        ;;
+    check)
+        check_code
         ;;
     release)
         build_release ${JOBS}
