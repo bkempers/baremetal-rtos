@@ -8,6 +8,7 @@
 #include "drivers/sensors/bme680/bme680.h"
 #include "stm32h7rs_hal_i2c.h"
 
+#include "shell_command.h"
 #include "console.h"
 
 #define BME680_I2C_ADDR_PRIMARY   0x76
@@ -43,6 +44,8 @@ typedef struct {
     int8_t              error_code;
     bool                use_gas_sensor;
 } BME680_Handle;
+
+BME680_SensorData old_data;
 
 bool BME680_Sensor_Init(void);
 void BME680_Sensor_Task(void);

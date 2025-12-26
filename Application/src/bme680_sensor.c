@@ -7,9 +7,56 @@
 static volatile bool i2c_tx_complete = false;
 static volatile bool i2c_rx_complete = false;
 static volatile bool i2c_error       = false;
+static volatile bool bme680_running  = false;
 
 BME680_Handle bme680_sensor_handle;
 I2C_Handle    i2c1_handler;
+
+static void bme680_usage()
+{
+    PRINT_INFO("System information usage: \r\n \
+        - status: Get the BME680 driver status \r\n \
+        - data: Get the latest sensor data \r\n \
+        - info: Get information regarding the sensor \r\n");
+}
+
+static int bme680_handler(int argc, char **argv)
+{
+    if (argc < 2) {
+        bme680_usage();
+        return 1;
+    }
+
+    if (strcmp(argv[1], "status") == 0) {
+        PRINT_INFO("BME680 Driver Status: \r\n\
+            - Running: %s \r\n \
+            - State: %d \r\n \
+            - Error: 0x%x \r\n ",
+        bme680_running ? "true" : "false", bme680_sensor_handle.state, bme680_sensor_handle.error_code);
+
+        return 0;
+    }
+
+    if (strcmp(argv[1], "data") == 0) {
+        BME680_Sensor_Task();
+        return 0;
+    }
+
+    if (strcmp(argv[1], "info") == 0) {
+        PRINT_INFO("BME680 Sensor Information: \r\n\
+            - Chip ID: 0x%X \r\n ", bme680_sensor_handle.bme_dev.chip_id);
+
+        return 0;
+    }
+
+    if (strlen(*argv) > 2) {
+        PRINT_INFO("Unknown system argument %s", argv[1]);
+        return 1;
+    }
+
+    return 0;
+}
+SHELL_COMMAND_REGISTER(bme680, bme680_handler, "Access BME680 sensor information");
 
 static void I2C_Scan(void)
 {
@@ -108,10 +155,10 @@ bool BME680_Sensor_Init()
         return false;
     }
 
-    Led_Toggle(2);
-
     BME680_HAL_ConfigureBasic(&bme680_sensor_handle);
+
     PRINT_INFO("BME680 initialized");
+    bme680_running = true;
 
     return true;
 }
@@ -152,20 +199,35 @@ void BME680_HAL_I2C_ErrorCallback(I2C_Handle *handle)
 
 void BME680_Sensor_Task()
 {
-    BME680_StateTypeDef state = BME680_HAL_Process(&bme680_sensor_handle);
-    BME680_SensorData   data;
+    PRINT_INFO("Temp: %.2f°C / %.2f°F \r\n \
+        Press: %.2f hPa \r\n \
+        Hum: %.2f%%", old_data.temperature, ((old_data.temperature * 1.8) + 32), old_data.pressure, old_data.humidity);
 
-    if (state == BME680_STATE_DATA_READY) {
-        if (BME680_HAL_GetData(&bme680_sensor_handle, &data) == BME680_OK) {
-            PRINT_INFO("Temp: %.2f°C  Press: %.2f hPa  Hum: %.2f%%", data.temperature, data.pressure, data.humidity);
-        }
-    }
+    // BME680_StateTypeDef state = BME680_HAL_Process(&bme680_sensor_handle);
+    // BME680_SensorData   data;
+    //
+    // if (state == BME680_STATE_DATA_READY) {
+    //     if (BME680_HAL_GetData(&bme680_sensor_handle, &data) == BME680_OK) {
+    //         PRINT_INFO("Temp: %.2f°C  Press: %.2f hPa  Hum: %.2f%%", data.temperature, data.pressure, data.humidity);
+    //         old_data = data;
+    //     }
+    // } else {
+    //     PRINT_INFO("Temp: %.2f°C  Press: %.2f hPa  Hum: %.2f%%", old_data.temperature, old_data.pressure, old_data.humidity);
+    // }
 }
 
 void BME680_Read_Trigger()
 {
     if (!BME680_HAL_IsBusy(&bme680_sensor_handle)) {
         BME680_HAL_StartMeasurement(&bme680_sensor_handle, false); // false = no gas
+    }
+
+    BME680_SensorData data;
+    BME680_StateTypeDef state = BME680_HAL_Process(&bme680_sensor_handle);
+    if (state == BME680_STATE_DATA_READY) {
+        if (BME680_HAL_GetData(&bme680_sensor_handle, &data) == BME680_OK) {
+            old_data = data;
+        }
     }
 }
 

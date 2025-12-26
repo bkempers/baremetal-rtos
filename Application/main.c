@@ -21,8 +21,7 @@ int main(void)
     Console_Init();
 
     if (BME680_Sensor_Init()) {
-        Scheduler_AddTask(BME680_Sensor_Task, 100);
-        Scheduler_AddTask(BME680_Read_Trigger, 2000);
+        Scheduler_AddTask(BME680_Read_Trigger, 1000);
     }
 
     Led_Reset();
