@@ -1,4 +1,5 @@
 #include "bme680_sensor.h"
+#include "stm32h7rs_hal.h"
 #include "system.h"
 #include <string.h>
 
@@ -10,7 +11,42 @@ static volatile bool i2c_error       = false;
 BME680_Handle bme680_sensor_handle;
 I2C_Handle    i2c1_handler;
 
-static void I2C_Scan(void);
+static void I2C_Scan(void)
+{
+    PRINT_INFO("Scanning I2C bus...");
+    for (uint8_t addr = 1; addr < 128; addr++) {
+        HAL_Status status = HAL_I2C_IsDeviceReady(&i2c1_handler, 
+                                                    addr << 1, 
+                                                    1, 
+                                                    10);
+        if (status == HAL_OK) {
+            PRINT_INFO("Device found at 0x%02X", addr);
+        }
+    }
+    PRINT_INFO("Scan complete");
+    HAL_DelayMS(250);
+}
+
+static void Debug_I2C_State(void)
+{
+    PRINT_INFO("=== I2C1 Peripheral State ===");
+    PRINT_INFO("CR1: 0x%08X", I2C1->CR1);
+    PRINT_INFO("  PE (bit 0): %u (should be 1)", I2C1->CR1 & 0x1);
+    
+    PRINT_INFO("ISR: 0x%08X", I2C1->ISR);
+    PRINT_INFO("  TXE (bit 0): %u", (I2C1->ISR >> 0) & 0x1);
+    PRINT_INFO("  TXIS (bit 1): %u", (I2C1->ISR >> 1) & 0x1);
+    PRINT_INFO("  RXNE (bit 2): %u", (I2C1->ISR >> 2) & 0x1);
+    PRINT_INFO("  NACKF (bit 4): %u (ERROR if 1)", (I2C1->ISR >> 4) & 0x1);
+    PRINT_INFO("  STOPF (bit 5): %u", (I2C1->ISR >> 5) & 0x1);
+    PRINT_INFO("  BERR (bit 8): %u (Bus Error)", (I2C1->ISR >> 8) & 0x1);
+    PRINT_INFO("  ARLO (bit 9): %u (Arbitration Lost)", (I2C1->ISR >> 9) & 0x1);
+    PRINT_INFO("  BUSY (bit 15): %u (should be 0)", (I2C1->ISR >> 15) & 0x1);
+    
+    PRINT_INFO("TIMINGR: 0x%08X", I2C1->TIMINGR);
+
+    HAL_DelayMS(250);
+}
 
 bool BME680_Sensor_Init()
 {
@@ -38,8 +74,7 @@ bool BME680_Sensor_Init()
 
     /* Configure I2C1 Handler */
     i2c1_handler.Instance = I2C1;
-    // i2c1_handler.Init.Timing           = 0x10707DBC; // 100kHz Standard Mode
-    i2c1_handler.Init.Timing           = 0x00B03FDB;
+    i2c1_handler.Init.Timing           = 0x10C0ECFF; // 100kHz Standard Mode
     i2c1_handler.Init.OwnAddress1      = 0;
     i2c1_handler.Init.AddressingMode   = I2C_ADDRESSINGMODE_7BIT;
     i2c1_handler.Init.DualAddressMode  = I2C_DUALADDRESS_DISABLE;
@@ -64,12 +99,11 @@ bool BME680_Sensor_Init()
     __NVIC_SetPriority(I2C1_ER_IRQn, 5);
     __NVIC_EnableIRQ(I2C1_ER_IRQn);
 
-    HAL_DelayMS(200); // Longer delay
-
-    // Scan for devices
+    HAL_DelayMS(500); // Longer delay
+ 
     I2C_Scan();
 
-    if (BME680_HAL_Init(&bme680_sensor_handle, &i2c1_handler, BME680_I2C_ADDR_PRIMARY) != BME680_OK) {
+    if (BME680_HAL_Init(&bme680_sensor_handle, &i2c1_handler, BME680_I2C_ADDR_SECONDARY) != BME680_OK) {
         PRINT_INFO("Failed to initialize BME680 sensor");
         return false;
     }
@@ -104,37 +138,16 @@ void BME680_HAL_I2C_RxCpltCallback(I2C_Handle *handle)
 
 void BME680_HAL_I2C_ErrorCallback(I2C_Handle *handle)
 {
+    PRINT_ERROR("I2C Error callback! ErrorCode: 0x%08u", handle->ErrorCode);
+
+    // Decode the error code bits
+    if (handle->ErrorCode & HAL_I2C_ERROR_BERR)    PRINT_ERROR("  -> BERR");
+    if (handle->ErrorCode & HAL_I2C_ERROR_ARLO)    PRINT_ERROR("  -> ARLO"); 
+    if (handle->ErrorCode & HAL_I2C_ERROR_AF)      PRINT_ERROR("  -> AF (NACK)");
+    if (handle->ErrorCode & HAL_I2C_ERROR_OVR)     PRINT_ERROR("  -> OVR");
+    if (handle->ErrorCode & HAL_I2C_ERROR_DMA)     PRINT_ERROR("  -> DMA");
+    if (handle->ErrorCode & HAL_I2C_ERROR_TIMEOUT) PRINT_ERROR("  -> TIMEOUT");
     i2c_error = true;
-    PRINT_INFO("Failed to initialize BME680, exiting.");
-    Led_Toggle(3);
-    // Error_Handler();
-}
-
-static void I2C_Scan(void)
-{
-    PRINT_INFO("Scanning I2C bus...");
-
-    for (uint8_t addr = 0x76; addr < 0x7F; addr++) {
-        i2c_tx_complete = false;
-        i2c_error       = false;
-
-        // Try to send just the address (0-byte write)
-        uint8_t dummy = 0;
-        if (HAL_I2C_Master_TX_IT(&i2c1_handler, addr << 1, &dummy, 0) == HAL_OK) {
-            uint32_t timeout = HAL_GetTick() + 50;
-            while (!i2c_tx_complete && !i2c_error && HAL_GetTick() < timeout) {
-                // Wait
-            }
-
-            if (!i2c_error) {
-                PRINT_INFO("  Found device at 0x%02X", addr);
-            }
-        }
-
-        HAL_DelayMS(2); // Small delay between scans
-    }
-
-    PRINT_INFO("I2C scan complete");
 }
 
 void BME680_Sensor_Task()
@@ -160,14 +173,11 @@ static BME680_INTF_RET_TYPE bme68x_i2c_read_it(uint8_t reg_addr, uint8_t *reg_da
 {
     BME680_Handle *handle = (BME680_Handle *) intf_ptr;
 
-    PRINT_INFO("I2C Read: reg=0x%02X, len=%u", reg_addr, len);
-
     i2c_rx_complete   = false;
     i2c_error         = false;
-    HAL_Status status = HAL_I2C_Mem_Read_IT(handle->hi2c, handle->i2c_addr << 1, reg_addr, I2C_MEMADD_SIZE_8BIT, reg_data, len);
 
-    if (status != HAL_OK) {
-        PRINT_ERROR("HAL_I2C_Mem_Read_IT failed: %d", status);
+
+    if (HAL_I2C_Mem_Read_IT(handle->hi2c, handle->i2c_addr << 1, reg_addr, I2C_MEMADD_SIZE_8BIT, reg_data, len) != HAL_OK) {
         return BME680_E_COM_FAIL;
     }
 
@@ -175,9 +185,6 @@ static BME680_INTF_RET_TYPE bme68x_i2c_read_it(uint8_t reg_addr, uint8_t *reg_da
     uint32_t timeout = HAL_GetTick() + 100;
     while (!i2c_rx_complete && !i2c_error) {
         if (HAL_GetTick() > timeout) {
-            PRINT_ERROR("I2C Read timeout");
-            PRINT_ERROR("  ISR: 0x%08u", handle->hi2c->Instance->ISR);
-            PRINT_ERROR("  State: %d", handle->hi2c->State);
             return BME680_E_COM_FAIL;
         }
     }
@@ -187,7 +194,6 @@ static BME680_INTF_RET_TYPE bme68x_i2c_read_it(uint8_t reg_addr, uint8_t *reg_da
         return BME680_E_COM_FAIL;
     }
 
-    PRINT_INFO("I2C Read success, data[0]=0x%02X", reg_data[0]);
     return BME680_OK;
 }
 
@@ -209,7 +215,13 @@ static BME680_INTF_RET_TYPE bme68x_i2c_write_it(uint8_t reg_addr, const uint8_t 
         }
     }
 
-    return i2c_error ? BME680_E_COM_FAIL : BME680_OK;
+    if (i2c_error) {
+        PRINT_ERROR("I2C Write error: 0x%08u", handle->hi2c->ErrorCode);
+        return BME680_E_COM_FAIL;
+    }
+
+    return BME680_OK;
+
 }
 
 static void bme68x_delay_us(uint32_t period, void *intf_ptr)

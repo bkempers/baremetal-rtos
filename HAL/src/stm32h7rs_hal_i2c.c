@@ -438,18 +438,30 @@ HAL_Status HAL_I2C_Master_RX_IT(I2C_Handle *handle, uint16_t DevAddress, uint8_t
 
 static void I2C_TransferConfig(I2C_Handle *handle, uint16_t DevAddress, uint8_t Size, uint32_t Mode, uint32_t Request)
 {
-    uint32_t tmp;
+    uint32_t tmpreg;
 
-    /* Declaration of tmp to prevent undefined behavior of volatile usage */
-    tmp = ((uint32_t) (((uint32_t) DevAddress & I2C_CR2_SADD) | (((uint32_t) Size << I2C_CR2_NBYTES_Pos) & I2C_CR2_NBYTES) | (uint32_t) Mode |
-                       (uint32_t) Request) &
-           (~0x80000000U));
-
-    /* update CR2 register */
-    MODIFY_REG(handle->Instance->CR2,
-               ((I2C_CR2_SADD | I2C_CR2_NBYTES | I2C_CR2_RELOAD | I2C_CR2_AUTOEND |
-                 (I2C_CR2_RD_WRN & (uint32_t) (Request >> (31U - I2C_CR2_RD_WRN_Pos))) | I2C_CR2_START | I2C_CR2_STOP)),
-               tmp);
+    /* Read current CR2 value */
+    tmpreg = handle->Instance->CR2;
+    
+    /* Clear the bits we're about to configure */
+    tmpreg &= ~(I2C_CR2_SADD | I2C_CR2_NBYTES | I2C_CR2_RELOAD | I2C_CR2_AUTOEND | 
+                I2C_CR2_RD_WRN | I2C_CR2_START | I2C_CR2_STOP);
+    
+    /* Set slave address */
+    tmpreg |= (DevAddress & I2C_CR2_SADD);
+    
+    /* Set number of bytes */
+    tmpreg |= ((uint32_t)Size << I2C_CR2_NBYTES_Pos) & I2C_CR2_NBYTES;
+    
+    /* Set mode (RELOAD, AUTOEND, or SOFTEND) */
+    tmpreg |= Mode;
+    
+    /* Set START/STOP and direction from Request parameter */
+    /* Mask off the sentinel bit 31 from Request */
+    tmpreg |= (Request & ~0x80000000U);
+    
+    /* Write back to CR2 */
+    handle->Instance->CR2 = tmpreg;
 }
 
 static HAL_Status I2C_Master_ISR_IT(struct __I2C_Handle *handle, uint32_t ITFlags, uint32_t ITSources)
@@ -656,11 +668,13 @@ HAL_Status HAL_I2C_Mem_Write_IT(I2C_Handle *handle, uint16_t DevAddress, uint16_
 
         /* If Memory address size is 8Bit */
         if (MemAddSize == I2C_MEMADD_SIZE_8BIT) {
-            /* Prefetch Memory Address */
-            handle->Instance->TXDR = I2C_MEM_ADD_LSB(MemAddress);
+            // /* Prefetch Memory Address */
+            // handle->Instance->TXDR = I2C_MEM_ADD_LSB(MemAddress);
+            //
+            // /* Reset Memaddress content */
+            // handle->MemAddress = 0xFFFFFFFFU;
 
-            /* Reset Memaddress content */
-            handle->MemAddress = 0xFFFFFFFFU;
+            handle->MemAddress = I2C_MEM_ADD_LSB(MemAddress);
         }
         /* If Memory address size is 16Bit */
         else {
@@ -715,11 +729,13 @@ HAL_Status HAL_I2C_Mem_Read_IT(I2C_Handle *handle, uint16_t DevAddress, uint16_t
 
         /* If Memory address size is 8Bit */
         if (MemAddSize == I2C_MEMADD_SIZE_8BIT) {
-            /* Prefetch Memory Address */
-            handle->Instance->TXDR = I2C_MEM_ADD_LSB(MemAddress);
+            // /* Prefetch Memory Address */
+            // handle->Instance->TXDR = I2C_MEM_ADD_LSB(MemAddress);
+            //
+            // /* Reset Memaddress content */
+            // handle->MemAddress = 0xFFFFFFFFU;
 
-            /* Reset Memaddress content */
-            handle->MemAddress = 0xFFFFFFFFU;
+            handle->MemAddress = I2C_MEM_ADD_LSB(MemAddress);
         }
         /* If Memory address size is 16Bit */
         else {
@@ -729,6 +745,7 @@ HAL_Status HAL_I2C_Mem_Read_IT(I2C_Handle *handle, uint16_t DevAddress, uint16_t
             /* Prepare Memaddress buffer for LSB part */
             handle->MemAddress = I2C_MEM_ADD_LSB(MemAddress);
         }
+
         /* Send Slave Address and Memory Address */
         I2C_TransferConfig(handle, DevAddress, (uint8_t) MemAddSize, I2C_SOFTEND_MODE, I2C_GENERATE_START_WRITE);
 
@@ -866,13 +883,13 @@ static void I2C_ITMasterCplt(I2C_Handle *handle, uint32_t ITFlags)
     handle->xferISR     = NULL;
     handle->xferOptions = I2C_NO_OPTION_FRAME;
 
-    if ((((tmpITFlags) &I2C_ISR_STOPF) == I2C_ISR_STOPF ? SET : RESET) != RESET) {
-        /* Clear NACK Flag */
-        handle->Instance->ICR = I2C_ISR_NACKF;
-
-        /* Set acknowledge error code */
-        handle->ErrorCode |= HAL_I2C_ERROR_AF;
-    }
+    // if ((((tmpITFlags) &I2C_ISR_STOPF) == I2C_ISR_STOPF ? SET : RESET) != RESET) {
+    //     /* Clear NACK Flag */
+    //     handle->Instance->ICR = I2C_ISR_NACKF;
+    //
+    //     /* Set acknowledge error code */
+    //     handle->ErrorCode |= HAL_I2C_ERROR_AF;
+    // }
 
     /* Fetch Last receive data if any */
     if ((handle->State == HAL_I2C_STATE_ABORT) && ((((tmpITFlags) &I2C_ISR_RXNE) == I2C_ISR_RXNE ? SET : RESET) != RESET)) {
