@@ -8,8 +8,8 @@
 #include "drivers/sensors/bme680/bme680.h"
 #include "stm32h7rs_hal_i2c.h"
 
-#include "shell_command.h"
 #include "console.h"
+#include "shell_command.h"
 
 #define BME680_I2C_ADDR_PRIMARY   0x76
 #define BME680_I2C_ADDR_SECONDARY 0x77

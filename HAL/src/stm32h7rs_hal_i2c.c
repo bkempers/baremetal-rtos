@@ -442,24 +442,23 @@ static void I2C_TransferConfig(I2C_Handle *handle, uint16_t DevAddress, uint8_t 
 
     /* Read current CR2 value */
     tmpreg = handle->Instance->CR2;
-    
+
     /* Clear the bits we're about to configure */
-    tmpreg &= ~(I2C_CR2_SADD | I2C_CR2_NBYTES | I2C_CR2_RELOAD | I2C_CR2_AUTOEND | 
-                I2C_CR2_RD_WRN | I2C_CR2_START | I2C_CR2_STOP);
-    
+    tmpreg &= ~(I2C_CR2_SADD | I2C_CR2_NBYTES | I2C_CR2_RELOAD | I2C_CR2_AUTOEND | I2C_CR2_RD_WRN | I2C_CR2_START | I2C_CR2_STOP);
+
     /* Set slave address */
     tmpreg |= (DevAddress & I2C_CR2_SADD);
-    
+
     /* Set number of bytes */
-    tmpreg |= ((uint32_t)Size << I2C_CR2_NBYTES_Pos) & I2C_CR2_NBYTES;
-    
+    tmpreg |= ((uint32_t) Size << I2C_CR2_NBYTES_Pos) & I2C_CR2_NBYTES;
+
     /* Set mode (RELOAD, AUTOEND, or SOFTEND) */
     tmpreg |= Mode;
-    
+
     /* Set START/STOP and direction from Request parameter */
     /* Mask off the sentinel bit 31 from Request */
     tmpreg |= (Request & ~0x80000000U);
-    
+
     /* Write back to CR2 */
     handle->Instance->CR2 = tmpreg;
 }

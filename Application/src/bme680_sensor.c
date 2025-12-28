@@ -32,7 +32,7 @@ static int bme680_handler(int argc, char **argv)
             - Running: %s \r\n \
             - State: %d \r\n \
             - Error: 0x%x \r\n ",
-        bme680_running ? "true" : "false", bme680_sensor_handle.state, bme680_sensor_handle.error_code);
+                   bme680_running ? "true" : "false", bme680_sensor_handle.state, bme680_sensor_handle.error_code);
 
         return 0;
     }
@@ -44,7 +44,8 @@ static int bme680_handler(int argc, char **argv)
 
     if (strcmp(argv[1], "info") == 0) {
         PRINT_INFO("BME680 Sensor Information: \r\n\
-            - Chip ID: 0x%X \r\n ", bme680_sensor_handle.bme_dev.chip_id);
+            - Chip ID: 0x%X \r\n ",
+                   bme680_sensor_handle.bme_dev.chip_id);
 
         return 0;
     }
@@ -62,10 +63,7 @@ static void I2C_Scan(void)
 {
     PRINT_INFO("Scanning I2C bus...");
     for (uint8_t addr = 1; addr < 128; addr++) {
-        HAL_Status status = HAL_I2C_IsDeviceReady(&i2c1_handler, 
-                                                    addr << 1, 
-                                                    1, 
-                                                    10);
+        HAL_Status status = HAL_I2C_IsDeviceReady(&i2c1_handler, addr << 1, 1, 10);
         if (status == HAL_OK) {
             PRINT_INFO("Device found at 0x%02X", addr);
         }
@@ -79,7 +77,7 @@ static void Debug_I2C_State(void)
     PRINT_INFO("=== I2C1 Peripheral State ===");
     PRINT_INFO("CR1: 0x%08X", I2C1->CR1);
     PRINT_INFO("  PE (bit 0): %u (should be 1)", I2C1->CR1 & 0x1);
-    
+
     PRINT_INFO("ISR: 0x%08X", I2C1->ISR);
     PRINT_INFO("  TXE (bit 0): %u", (I2C1->ISR >> 0) & 0x1);
     PRINT_INFO("  TXIS (bit 1): %u", (I2C1->ISR >> 1) & 0x1);
@@ -89,7 +87,7 @@ static void Debug_I2C_State(void)
     PRINT_INFO("  BERR (bit 8): %u (Bus Error)", (I2C1->ISR >> 8) & 0x1);
     PRINT_INFO("  ARLO (bit 9): %u (Arbitration Lost)", (I2C1->ISR >> 9) & 0x1);
     PRINT_INFO("  BUSY (bit 15): %u (should be 0)", (I2C1->ISR >> 15) & 0x1);
-    
+
     PRINT_INFO("TIMINGR: 0x%08X", I2C1->TIMINGR);
 
     HAL_DelayMS(250);
@@ -120,7 +118,7 @@ bool BME680_Sensor_Init()
     __HAL_RCC_I2C1_CLK_ENABLE();
 
     /* Configure I2C1 Handler */
-    i2c1_handler.Instance = I2C1;
+    i2c1_handler.Instance              = I2C1;
     i2c1_handler.Init.Timing           = 0x10C0ECFF; // 100kHz Standard Mode
     i2c1_handler.Init.OwnAddress1      = 0;
     i2c1_handler.Init.AddressingMode   = I2C_ADDRESSINGMODE_7BIT;
@@ -147,7 +145,7 @@ bool BME680_Sensor_Init()
     __NVIC_EnableIRQ(I2C1_ER_IRQn);
 
     HAL_DelayMS(500); // Longer delay
- 
+
     I2C_Scan();
 
     if (BME680_HAL_Init(&bme680_sensor_handle, &i2c1_handler, BME680_I2C_ADDR_SECONDARY) != BME680_OK) {
@@ -188,12 +186,18 @@ void BME680_HAL_I2C_ErrorCallback(I2C_Handle *handle)
     PRINT_ERROR("I2C Error callback! ErrorCode: 0x%08u", handle->ErrorCode);
 
     // Decode the error code bits
-    if (handle->ErrorCode & HAL_I2C_ERROR_BERR)    PRINT_ERROR("  -> BERR");
-    if (handle->ErrorCode & HAL_I2C_ERROR_ARLO)    PRINT_ERROR("  -> ARLO"); 
-    if (handle->ErrorCode & HAL_I2C_ERROR_AF)      PRINT_ERROR("  -> AF (NACK)");
-    if (handle->ErrorCode & HAL_I2C_ERROR_OVR)     PRINT_ERROR("  -> OVR");
-    if (handle->ErrorCode & HAL_I2C_ERROR_DMA)     PRINT_ERROR("  -> DMA");
-    if (handle->ErrorCode & HAL_I2C_ERROR_TIMEOUT) PRINT_ERROR("  -> TIMEOUT");
+    if (handle->ErrorCode & HAL_I2C_ERROR_BERR)
+        PRINT_ERROR("  -> BERR");
+    if (handle->ErrorCode & HAL_I2C_ERROR_ARLO)
+        PRINT_ERROR("  -> ARLO");
+    if (handle->ErrorCode & HAL_I2C_ERROR_AF)
+        PRINT_ERROR("  -> AF (NACK)");
+    if (handle->ErrorCode & HAL_I2C_ERROR_OVR)
+        PRINT_ERROR("  -> OVR");
+    if (handle->ErrorCode & HAL_I2C_ERROR_DMA)
+        PRINT_ERROR("  -> DMA");
+    if (handle->ErrorCode & HAL_I2C_ERROR_TIMEOUT)
+        PRINT_ERROR("  -> TIMEOUT");
     i2c_error = true;
 }
 
@@ -201,7 +205,8 @@ void BME680_Sensor_Task()
 {
     PRINT_INFO("Temp: %.2f°C / %.2f°F \r\n \
         Press: %.2f hPa \r\n \
-        Hum: %.2f%%", old_data.temperature, ((old_data.temperature * 1.8) + 32), old_data.pressure, old_data.humidity);
+        Hum: %.2f%%",
+               old_data.temperature, ((old_data.temperature * 1.8) + 32), old_data.pressure, old_data.humidity);
 
     // BME680_StateTypeDef state = BME680_HAL_Process(&bme680_sensor_handle);
     // BME680_SensorData   data;
@@ -222,7 +227,7 @@ void BME680_Read_Trigger()
         BME680_HAL_StartMeasurement(&bme680_sensor_handle, false); // false = no gas
     }
 
-    BME680_SensorData data;
+    BME680_SensorData   data;
     BME680_StateTypeDef state = BME680_HAL_Process(&bme680_sensor_handle);
     if (state == BME680_STATE_DATA_READY) {
         if (BME680_HAL_GetData(&bme680_sensor_handle, &data) == BME680_OK) {
@@ -235,9 +240,8 @@ static BME680_INTF_RET_TYPE bme68x_i2c_read_it(uint8_t reg_addr, uint8_t *reg_da
 {
     BME680_Handle *handle = (BME680_Handle *) intf_ptr;
 
-    i2c_rx_complete   = false;
-    i2c_error         = false;
-
+    i2c_rx_complete = false;
+    i2c_error       = false;
 
     if (HAL_I2C_Mem_Read_IT(handle->hi2c, handle->i2c_addr << 1, reg_addr, I2C_MEMADD_SIZE_8BIT, reg_data, len) != HAL_OK) {
         return BME680_E_COM_FAIL;
@@ -283,7 +287,6 @@ static BME680_INTF_RET_TYPE bme68x_i2c_write_it(uint8_t reg_addr, const uint8_t 
     }
 
     return BME680_OK;
-
 }
 
 static void bme68x_delay_us(uint32_t period, void *intf_ptr)
