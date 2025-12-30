@@ -1,6 +1,8 @@
 #include "stm32h7rs_hal_spi.h"
 #include "stm32h7rs_hal.h"
 
+static HAL_Status SPI_WaitOnFlagUntilTimeout(const SPI_Handle *handle, uint32_t Flag, FlagStatus FlagStatus, uint32_t Timeout, uint32_t Tickstart);
+
 static void     SPI_TxISR_8BIT(SPI_Handle *handle);
 static void     SPI_TxISR_16BIT(SPI_Handle *handle);
 static void     SPI_TxISR_32BIT(SPI_Handle *handle);
@@ -82,7 +84,354 @@ HAL_Status HAL_SPI_DeInit(SPI_Handle *handle)
     return HAL_OK;
 }
 
-// polling tx/rx
+HAL_Status HAL_SPI_Transmit(SPI_Handle *handle, const uint8_t *ptrData, uint16_t Size, uint32_t Timeout)
+{
+    uint32_t tickstart;
+
+    /* Init tickstart for timeout management*/
+    tickstart = HAL_GetTick();
+
+    if (handle->State != HAL_SPI_STATE_READY) {
+        return HAL_BUSY;
+    }
+
+    if ((ptrData == NULL) || (Size == 0UL)) {
+        return HAL_ERROR;
+    }
+
+    /* Set the transaction information */
+    handle->State     = HAL_SPI_STATE_BUSY_TX;
+    handle->ErrorCode = HAL_SPI_ERROR_NONE;
+    handle->txBuffPtr = (const uint8_t *) ptrData;
+    handle->txSize    = Size;
+    handle->txCount   = Size;
+
+    /*Init field not used in handle to zero */
+    handle->rxBuffPtr = NULL;
+    handle->rxSize    = (uint16_t) 0UL;
+    handle->rxCount   = (uint16_t) 0UL;
+    handle->txISR     = NULL;
+    handle->rxISR     = NULL;
+
+    /* Configure communication direction : 1Line */
+    if (handle->Init.Direction == SPI_DIRECTION_1LINE) {
+        SET_BIT(handle->Instance->CR1, SPI_CR1_HDDIR);
+    } else {
+        MODIFY_REG(handle->Instance->CFG2, SPI_CFG2_COMM, SPI_CFG2_COMM_0);
+    }
+
+    /* Set the number of data at current transfer */
+    MODIFY_REG(handle->Instance->CR2, SPI_CR2_TSIZE, Size);
+
+    /* Enable SPI peripheral */
+    SET_BIT(handle->Instance->CR1, SPI_CR1_SPE);
+
+    if (handle->Init.Mode == SPI_CFG2_MASTER) {
+        /* Master transfer start */
+        SET_BIT(handle->Instance->CR1, SPI_CR1_CSTART);
+    }
+
+    /* Transmit data in 32 Bit mode */
+    if ((handle->Init.DataSize > SPI_DATASIZE_16BIT) && (IS_SPI_FULL_INSTANCE(handle->Instance))) {
+        /* Transmit data in 32 Bit mode */
+        while (handle->txCount > 0UL) {
+            /* Wait until TXP flag is set to send data */
+            if ((handle->Instance->SR & SPI_SR_TXP) == SPI_SR_TXP) {
+                *((__IO uint32_t *) &handle->Instance->TXDR) = *((const uint32_t *) handle->txBuffPtr);
+                handle->txBuffPtr += sizeof(uint32_t);
+                handle->txCount--;
+            } else {
+                /* Timeout management */
+                if ((((HAL_GetTick() - tickstart) >= Timeout) && (Timeout != HAL_MAX_DELAY)) || (Timeout == 0U)) {
+                    /* Call standard close procedure with error check */
+                    SPI_CloseTransfer(handle);
+
+                    SET_BIT(handle->ErrorCode, HAL_SPI_ERROR_TIMEOUT);
+                    handle->State = HAL_SPI_STATE_READY;
+
+                    return HAL_TIMEOUT;
+                }
+            }
+        }
+    }
+    /* Transmit data in 16 Bit mode */
+    else if (handle->Init.DataSize > SPI_DATASIZE_8BIT) {
+        /* Transmit data in 16 Bit mode */
+        while (handle->txCount > 0UL) {
+            /* Wait until TXP flag is set to send data */
+            if ((handle->Instance->SR & SPI_SR_TXP) == SPI_SR_TXP) {
+                if ((handle->txCount > 1UL) && (handle->Init.FifoThreshold > SPI_FIFO_THRESHOLD_01DATA)) {
+                    *((__IO uint32_t *) &handle->Instance->TXDR) = *((const uint32_t *) handle->txBuffPtr);
+                    handle->txBuffPtr += sizeof(uint32_t);
+                    handle->txCount -= (uint16_t) 2UL;
+                } else {
+                    *((__IO uint16_t *) &handle->Instance->TXDR) = *((const uint16_t *) handle->txBuffPtr);
+                    handle->txBuffPtr += sizeof(uint16_t);
+                    handle->txCount--;
+                }
+            } else {
+                /* Timeout management */
+                if ((((HAL_GetTick() - tickstart) >= Timeout) && (Timeout != HAL_MAX_DELAY)) || (Timeout == 0U)) {
+                    /* Call standard close procedure with error check */
+                    SPI_CloseTransfer(handle);
+
+                    SET_BIT(handle->ErrorCode, HAL_SPI_ERROR_TIMEOUT);
+                    handle->State = HAL_SPI_STATE_READY;
+
+                    return HAL_TIMEOUT;
+                }
+            }
+        }
+    }
+    /* Transmit data in 8 Bit mode */
+    else {
+        while (handle->txCount > 0UL) {
+            /* Wait until TXP flag is set to send data */
+            if ((handle->Instance->SR & SPI_SR_TXP) == SPI_SR_TXP) {
+                if ((handle->txCount > 3UL) && (handle->Init.FifoThreshold > SPI_FIFO_THRESHOLD_03DATA)) {
+                    *((__IO uint32_t *) &handle->Instance->TXDR) = *((const uint32_t *) handle->txBuffPtr);
+                    handle->txBuffPtr += sizeof(uint32_t);
+                    handle->txCount -= (uint16_t) 4UL;
+                } else if ((handle->txCount > 1UL) && (handle->Init.FifoThreshold > SPI_FIFO_THRESHOLD_01DATA)) {
+                    *((__IO uint16_t *) &handle->Instance->TXDR) = *((const uint16_t *) handle->txBuffPtr);
+                    handle->txBuffPtr += sizeof(uint16_t);
+                    handle->txCount -= (uint16_t) 2UL;
+                } else {
+                    *((__IO uint8_t *) &handle->Instance->TXDR) = *((const uint8_t *) handle->txBuffPtr);
+                    handle->txBuffPtr += sizeof(uint8_t);
+                    handle->txCount--;
+                }
+            } else {
+                /* Timeout management */
+                if ((((HAL_GetTick() - tickstart) >= Timeout) && (Timeout != HAL_MAX_DELAY)) || (Timeout == 0U)) {
+                    /* Call standard close procedure with error check */
+                    SPI_CloseTransfer(handle);
+
+                    SET_BIT(handle->ErrorCode, HAL_SPI_ERROR_TIMEOUT);
+                    handle->State = HAL_SPI_STATE_READY;
+
+                    return HAL_TIMEOUT;
+                }
+            }
+        }
+    }
+
+    /* Wait for Tx (and CRC) data to be sent */
+    if (SPI_WaitOnFlagUntilTimeout(handle, SPI_SR_EOT, RESET, Timeout, tickstart) != HAL_OK) {
+        SET_BIT(handle->ErrorCode, HAL_SPI_ERROR_FLAG);
+    }
+
+    /* Call standard close procedure with error check */
+    SPI_CloseTransfer(handle);
+
+    handle->State = HAL_SPI_STATE_READY;
+
+    if (handle->ErrorCode != HAL_SPI_ERROR_NONE) {
+        return HAL_ERROR;
+    } else {
+        return HAL_OK;
+    }
+}
+
+HAL_Status HAL_SPI_Receive(SPI_Handle *handle, uint8_t *pData, uint16_t Size, uint32_t Timeout)
+{
+    uint32_t tickstart;
+    uint32_t temp_sr_reg;
+    uint16_t init_max_data_in_fifo;
+    init_max_data_in_fifo = (((uint16_t) (handle->Init.FifoThreshold >> 5U) + 1U));
+
+    /* Init tickstart for timeout management*/
+    tickstart = HAL_GetTick();
+
+    if (handle->State != HAL_SPI_STATE_READY) {
+        return HAL_BUSY;
+    }
+
+    if ((pData == NULL) || (Size == 0UL)) {
+        return HAL_ERROR;
+    }
+
+    /* Set the transaction information */
+    handle->State     = HAL_SPI_STATE_BUSY_RX;
+    handle->ErrorCode = HAL_SPI_ERROR_NONE;
+    handle->rxBuffPtr = (uint8_t *) pData;
+    handle->rxSize    = Size;
+    handle->rxCount   = Size;
+
+    /*Init field not used in handle to zero */
+    handle->txBuffPtr = NULL;
+    handle->txSize    = (uint16_t) 0UL;
+    handle->txCount   = (uint16_t) 0UL;
+    handle->rxISR     = NULL;
+    handle->txISR     = NULL;
+
+    /* Configure communication direction: 1Line */
+    if (handle->Init.Direction == SPI_DIRECTION_1LINE) {
+        CLEAR_BIT(handle->Instance->CR1, SPI_CR1_HDDIR);
+    } else {
+        MODIFY_REG(handle->Instance->CFG2, SPI_CFG2_COMM, SPI_CFG2_COMM_1);
+    }
+
+    /* Set the number of data at current transfer */
+    MODIFY_REG(handle->Instance->CR2, SPI_CR2_TSIZE, Size);
+
+    /* Enable SPI peripheral */
+    SET_BIT(handle->Instance->CR1, SPI_CR1_SPE);
+
+    if (handle->Init.Mode == SPI_CFG2_MASTER) {
+        /* Master transfer start */
+        SET_BIT(handle->Instance->CR1, SPI_CR1_CSTART);
+    }
+
+    /* Receive data in 32 Bit mode */
+    if ((handle->Init.DataSize > SPI_DATASIZE_16BIT) && (IS_SPI_FULL_INSTANCE(handle->Instance))) {
+        /* Transfer loop */
+        while (handle->rxCount > 0UL) {
+            /* Evaluate state of SR register */
+            temp_sr_reg = handle->Instance->SR;
+
+            /* Check the RXP flag */
+            if ((handle->Instance->SR & SPI_SR_RXP) == SPI_SR_RXP) {
+                *((uint32_t *) handle->rxBuffPtr) = *((__IO uint32_t *) &handle->Instance->RXDR);
+                handle->rxBuffPtr += sizeof(uint32_t);
+                handle->rxCount--;
+            }
+            /* Check RXWNE flag if RXP cannot be reached */
+            else if ((handle->rxCount < init_max_data_in_fifo) && ((temp_sr_reg & SPI_SR_RXWNE_Msk) != 0UL)) {
+                *((uint32_t *) handle->rxBuffPtr) = *((__IO uint32_t *) &handle->Instance->RXDR);
+                handle->rxBuffPtr += sizeof(uint32_t);
+                handle->rxCount--;
+            }
+            /* Check if transfer is locked because of a suspend */
+            else if (HAL_IS_BIT_SET(temp_sr_reg, SPI_SR_SUSP)) {
+                /* Verify suspend is triggered by hardware and not software */
+                if (HAL_IS_BIT_SET(handle->Instance->CR1, SPI_CR1_CSTART)) {
+                    SET_BIT(handle->Instance->IFCR, SPI_IFCR_SUSPC);
+                }
+            } else {
+                /* Timeout management */
+                if ((((HAL_GetTick() - tickstart) >= Timeout) && (Timeout != HAL_MAX_DELAY)) || (Timeout == 0U)) {
+                    /* Call standard close procedure with error check */
+                    SPI_CloseTransfer(handle);
+
+                    SET_BIT(handle->ErrorCode, HAL_SPI_ERROR_TIMEOUT);
+                    handle->State = HAL_SPI_STATE_READY;
+
+                    return HAL_TIMEOUT;
+                }
+            }
+        }
+    }
+    /* Receive data in 16 Bit mode */
+    else if (handle->Init.DataSize > SPI_DATASIZE_8BIT) {
+        /* Transfer loop */
+        while (handle->rxCount > 0UL) {
+            /* Evaluate state of SR register */
+            temp_sr_reg = handle->Instance->SR;
+
+            /* Check the RXP flag */
+            if ((handle->Instance->SR & SPI_SR_RXP) == SPI_SR_RXP) {
+                *((uint16_t *) handle->rxBuffPtr) = *((__IO uint16_t *) &handle->Instance->RXDR);
+                handle->rxBuffPtr += sizeof(uint16_t);
+                handle->rxCount--;
+            }
+            /* Check RXWNE flag if RXP cannot be reached */
+            else if ((handle->rxCount < init_max_data_in_fifo) && ((temp_sr_reg & SPI_SR_RXWNE_Msk) != 0UL)) {
+                *((uint16_t *) handle->rxBuffPtr) = *((__IO uint16_t *) &handle->Instance->RXDR);
+                handle->rxBuffPtr += sizeof(uint16_t);
+                *((uint16_t *) handle->rxBuffPtr) = *((__IO uint16_t *) &handle->Instance->RXDR);
+                handle->rxBuffPtr += sizeof(uint16_t);
+                handle->rxCount -= (uint16_t) 2UL;
+            }
+            /* Check RXPLVL flags when RXWNE cannot be reached */
+            else if ((handle->rxCount == 1UL) && ((temp_sr_reg & SPI_SR_RXPLVL_0) != 0UL)) {
+                *((uint16_t *) handle->rxBuffPtr) = *((__IO uint16_t *) &handle->Instance->RXDR);
+                handle->rxBuffPtr += sizeof(uint16_t);
+                handle->rxCount--;
+            }
+            /* Check if transfer is locked because of a suspend */
+            else if (HAL_IS_BIT_SET(temp_sr_reg, SPI_SR_SUSP)) {
+                /* Verify suspend is triggered by hardware and not software */
+                if (HAL_IS_BIT_SET(handle->Instance->CR1, SPI_CR1_CSTART)) {
+                    SET_BIT(handle->Instance->IFCR, SPI_IFCR_SUSPC);
+                }
+            } else {
+                /* Timeout management */
+                if ((((HAL_GetTick() - tickstart) >= Timeout) && (Timeout != HAL_MAX_DELAY)) || (Timeout == 0U)) {
+                    /* Call standard close procedure with error check */
+                    SPI_CloseTransfer(handle);
+
+                    SET_BIT(handle->ErrorCode, HAL_SPI_ERROR_TIMEOUT);
+                    handle->State = HAL_SPI_STATE_READY;
+
+                    return HAL_TIMEOUT;
+                }
+            }
+        }
+    }
+    /* Receive data in 8 Bit mode */
+    else {
+        /* Transfer loop */
+        while (handle->rxCount > 0UL) {
+            /* Evaluate state of SR register */
+            temp_sr_reg = handle->Instance->SR;
+
+            /* Check the RXP flag */
+            if ((handle->Instance->SR & SPI_SR_RXP) == SPI_SR_RXP) {
+                *((uint8_t *) handle->rxBuffPtr) = *((__IO uint8_t *) &handle->Instance->RXDR);
+                handle->rxBuffPtr += sizeof(uint8_t);
+                handle->rxCount--;
+            }
+            /* Check RXWNE flag if RXP cannot be reached */
+            else if ((handle->rxCount < init_max_data_in_fifo) && ((temp_sr_reg & SPI_SR_RXWNE_Msk) != 0UL)) {
+                *((uint8_t *) handle->rxBuffPtr) = *((__IO uint8_t *) &handle->Instance->RXDR);
+                handle->rxBuffPtr += sizeof(uint8_t);
+                *((uint8_t *) handle->rxBuffPtr) = *((__IO uint8_t *) &handle->Instance->RXDR);
+                handle->rxBuffPtr += sizeof(uint8_t);
+                *((uint8_t *) handle->rxBuffPtr) = *((__IO uint8_t *) &handle->Instance->RXDR);
+                handle->rxBuffPtr += sizeof(uint8_t);
+                *((uint8_t *) handle->rxBuffPtr) = *((__IO uint8_t *) &handle->Instance->RXDR);
+                handle->rxBuffPtr += sizeof(uint8_t);
+                handle->rxCount -= (uint16_t) 4UL;
+            }
+            /* Check RXPLVL flags when RXWNE cannot be reached */
+            else if ((handle->rxCount < 4UL) && ((temp_sr_reg & SPI_SR_RXPLVL_Msk) != 0UL)) {
+                *((uint8_t *) handle->rxBuffPtr) = *((__IO uint8_t *) &handle->Instance->RXDR);
+                handle->rxBuffPtr += sizeof(uint8_t);
+                handle->rxCount--;
+            }
+            /* Check if transfer is locked because of a suspend */
+            else if (HAL_IS_BIT_SET(temp_sr_reg, SPI_SR_SUSP)) {
+                /* Verify suspend is triggered by hardware and not software */
+                if (HAL_IS_BIT_SET(handle->Instance->CR1, SPI_CR1_CSTART)) {
+                    SET_BIT(handle->Instance->IFCR, SPI_IFCR_SUSPC);
+                }
+            } else {
+                /* Timeout management */
+                if ((((HAL_GetTick() - tickstart) >= Timeout) && (Timeout != HAL_MAX_DELAY)) || (Timeout == 0U)) {
+                    /* Call standard close procedure with error check */
+                    SPI_CloseTransfer(handle);
+
+                    SET_BIT(handle->ErrorCode, HAL_SPI_ERROR_TIMEOUT);
+                    handle->State = HAL_SPI_STATE_READY;
+
+                    return HAL_TIMEOUT;
+                }
+            }
+        }
+    }
+
+    /* Call standard close procedure with error check */
+    SPI_CloseTransfer(handle);
+
+    handle->State = HAL_SPI_STATE_READY;
+
+    if (handle->ErrorCode != HAL_SPI_ERROR_NONE) {
+        return HAL_ERROR;
+    } else {
+        return HAL_OK;
+    }
+}
 
 HAL_Status HAL_SPI_Transmit_IT(SPI_Handle *handle, const uint8_t *ptrData, uint16_t Size)
 {
@@ -580,6 +929,18 @@ static void SPI_CloseTransfer(SPI_Handle *handle)
 
     handle->txCount = (uint16_t) 0UL;
     handle->rxCount = (uint16_t) 0UL;
+}
+
+static HAL_Status SPI_WaitOnFlagUntilTimeout(const SPI_Handle *handle, uint32_t Flag, FlagStatus Status, uint32_t Timeout, uint32_t Tickstart)
+{
+    /* Wait until flag is set */
+    while (((((handle->Instance->SR) & Flag) == Flag) ? SET : RESET) == Status) {
+        /* Check for the Timeout */
+        if ((((HAL_GetTick() - Tickstart) >= Timeout) && (Timeout != HAL_MAX_DELAY)) || (Timeout == 0U)) {
+            return HAL_TIMEOUT;
+        }
+    }
+    return HAL_OK;
 }
 
 static uint32_t SPI_GetPacketSize(const SPI_Handle *handle)
