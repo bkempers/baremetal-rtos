@@ -1,0 +1,4 @@
+[submodule "Application/external/lvgl"]
+	path = Application/external/lvgl
+    url = https://github.com/lvgl/lvgl.git
+    branch = release/v9.4

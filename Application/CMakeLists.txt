@@ -1,3 +1,20 @@
+# ============================================
+# LVGL Configuration
+# ============================================
+message("-- Adding LVGL v9.4")
+# FORCE disable demos/examples (override cache)
+set(LV_CONF_BUILD_DISABLE_EXAMPLES ON CACHE BOOL "" FORCE)
+set(LV_CONF_BUILD_DISABLE_DEMOS ON CACHE BOOL "" FORCE)
+
+# For extra safety, also set these
+set(CONFIG_LV_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(CONFIG_LV_BUILD_DEMOS OFF CACHE BOOL "" FORCE)
+add_subdirectory(external/lvgl)
+
+target_include_directories(lvgl SYSTEM PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/inc
+)
+
 set(APP_SOURCES
     # Main entry point
     main.c
@@ -8,18 +25,16 @@ set(APP_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/task_scheduler.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/bme680_sensor.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ringbuffer.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/display.c
     # ${CMAKE_CURRENT_SOURCE_DIR}/src/adc.c
     # ${CMAKE_CURRENT_SOURCE_DIR}/src/exti.c
-    # ${CMAKE_CURRENT_SOURCE_DIR}/src/led_driver.c
-    # ${CMAKE_CURRENT_SOURCE_DIR}/src/syscalls.c
     # # ${CMAKE_CURRENT_SOURCE_DIR}/src/sysmem.c
     # ${CMAKE_CURRENT_SOURCE_DIR}/src/systick.c
-    # ${CMAKE_CURRENT_SOURCE_DIR}/src/timer.c
-    # ${CMAKE_CURRENT_SOURCE_DIR}/src/uart_driver.c
 )
 
 set(DRIVERS_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/drivers/sensors/bme680/bme680.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/drivers/display/st7789/st7789.c
 )
 
 set(SYSTEM_SOURCES
@@ -44,6 +59,7 @@ target_include_directories(${PROJECT_NAME}.elf PRIVATE
 
 # Link libraries
 target_link_libraries(${PROJECT_NAME}.elf PRIVATE
+    lvgl
     HAL
     # rtos
 )
@@ -53,7 +69,6 @@ set(LINKER_SCRIPT ${CMAKE_SOURCE_DIR}/linker_script.ld)
 target_link_options(${PROJECT_NAME}.elf PRIVATE
     -T${LINKER_SCRIPT}
     -Wl,-Map=${PROJECT_NAME}.map
-    # floating point linker additions
     -Wl,-u,_printf_float
     -Wl,-u,_scanf_float
 )

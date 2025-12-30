@@ -10,12 +10,18 @@
 #include "stm32h7rs_hal_rcc.h"
 #include "stm32h7rs_hal_spi.h"
 
+#include "lvgl.h"
+
 #include "console.h"
 #include "drivers/display/st7789/st7789.h"
 #include "shell_command.h"
 #include "system.h"
 
 SYS_Status Display_Init();
+
+void LVGL_Display_Init();
+void LVGL_Display_Task();
+
 bool       Display_ReadID();
 
 void Display_TxCpltCallback(SPI_Handle *handle);
