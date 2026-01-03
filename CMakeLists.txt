@@ -1,6 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
 
-# Must set before project()
 set(CMAKE_TOOLCHAIN_FILE ${CMAKE_SOURCE_DIR}/cmake/stm32h7rs_toolchain.cmake)
 
 # ============================================
@@ -10,7 +9,8 @@ set(LV_BUILD_CONF_PATH
     ${CMAKE_SOURCE_DIR}/Application/inc/lv_conf.h
     CACHE STRING "LVGL config path" FORCE
 )
-project(stm_rtos C ASM)
+
+project(stm_rtos LANGUAGES C ASM)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -119,8 +119,6 @@ add_custom_target(
         BYPRODUCTS ${CMAKE_BINARY_DIR}/Application/inc/git_info.h
     COMMENT "Updating git information..."
 )
-
-set(LV_CONF_PATH ${CMAKE_CURRENT_SOURCE_DIR}/Application/inc/lv_conf.h)
 
 # Subdirectories
 # add_subdirectory(rtos)

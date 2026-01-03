@@ -3,7 +3,6 @@
 
 #include "stm32h7rs_hal.h"
 #include "stm32h7rsxx.h"
-#include "stm32h7s3xx.h"
 #include <stdint.h>
 
 typedef struct {

@@ -6,6 +6,7 @@ add_library(HAL STATIC
     src/stm32h7rs_hal_tim.c
     src/stm32h7rs_hal_i2c.c
     src/stm32h7rs_hal_spi.c
+    src/stm32h7rs_hal_dma.c
 )
 
 target_include_directories(HAL PUBLIC
