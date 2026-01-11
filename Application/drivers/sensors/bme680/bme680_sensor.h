@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include "drivers/sensors/bme680/bme680.h"
+#include "bme680.h"
 #include "stm32h7rs_hal_i2c.h"
 
 #include "console.h"

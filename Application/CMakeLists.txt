@@ -2,11 +2,9 @@
 # LVGL Configuration
 # ============================================
 message("-- Adding LVGL v9.4")
-# FORCE disable demos/examples (override cache)
 set(LV_CONF_BUILD_DISABLE_EXAMPLES ON CACHE BOOL "" FORCE)
 set(LV_CONF_BUILD_DISABLE_DEMOS ON CACHE BOOL "" FORCE)
 
-# For extra safety, also set these
 set(CONFIG_LV_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(CONFIG_LV_BUILD_DEMOS OFF CACHE BOOL "" FORCE)
 add_subdirectory(external/lvgl)
@@ -15,27 +13,35 @@ target_include_directories(lvgl SYSTEM PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/inc
 )
 
-set(APP_SOURCES
-    # Main entry point
-    main.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/system.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/syscalls.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/led.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/console.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/task_scheduler.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/bme680_sensor.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/ringbuffer.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/display.c
-    # ${CMAKE_CURRENT_SOURCE_DIR}/src/adc.c
-    # ${CMAKE_CURRENT_SOURCE_DIR}/src/exti.c
-    # # ${CMAKE_CURRENT_SOURCE_DIR}/src/sysmem.c
-    # ${CMAKE_CURRENT_SOURCE_DIR}/src/systick.c
+# ============================================
+# Common Configuration Interface Library
+# ============================================
+add_library(common INTERFACE)
+
+target_include_directories(common INTERFACE
+    ${CMAKE_CURRENT_SOURCE_DIR}/inc
+    ${CMAKE_BINARY_DIR}/Application/inc      # For generated headers like git_info.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/console
+    ${CMAKE_CURRENT_SOURCE_DIR}/display
+    ${CMAKE_CURRENT_SOURCE_DIR}/led
+    ${CMAKE_CURRENT_SOURCE_DIR}/system
+    ${CMAKE_CURRENT_SOURCE_DIR}/tasks
+    ${CMAKE_CURRENT_SOURCE_DIR}/tools
+    ${CMAKE_CURRENT_SOURCE_DIR}/drivers
 )
 
-set(DRIVERS_SOURCES
-    ${CMAKE_CURRENT_SOURCE_DIR}/drivers/sensors/bme680/bme680.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/drivers/display/st7789/st7789.c
+target_link_libraries(common INTERFACE
+    HAL
+    lvgl
 )
+
+add_subdirectory(console)
+add_subdirectory(system)
+add_subdirectory(drivers)
+add_subdirectory(tasks)
+add_subdirectory(tools)
+add_subdirectory(led)
+add_subdirectory(display)
 
 set(SYSTEM_SOURCES
     ${CMAKE_SOURCE_DIR}/startup_stm32h7s3l8hx.c
@@ -44,27 +50,35 @@ set(SYSTEM_SOURCES
 
 # Create executable
 add_executable(${PROJECT_NAME}.elf
-    ${APP_SOURCES}
+    main.c
     ${SYSTEM_SOURCES}
-    ${DRIVERS_SOURCES}
+)
+
+target_sources(${PROJECT_NAME}.elf PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/system/syscalls.c
 )
 
 # Add application include directories
 target_include_directories(${PROJECT_NAME}.elf PRIVATE
     ${CMAKE_BINARY_DIR}/Application/inc
-    ${CMAKE_BINARY_DIR}/Application/drivers
     ${CMAKE_CURRENT_SOURCE_DIR}/inc      # src/inc/
-    ${CMAKE_CURRENT_SOURCE_DIR}          # src/ (for main.h if needed)
 )
 
 # Link libraries
 target_link_libraries(${PROJECT_NAME}.elf PRIVATE
-    lvgl
-    HAL
-    # rtos
+    common
+    console
+    system
+    display
+    tasks
+    tools
+    led
+    drivers
 )
 
-# Linker script
+# ============================================
+# Linker Configuration
+# ============================================
 set(LINKER_SCRIPT ${CMAKE_SOURCE_DIR}/linker_script.ld)
 target_link_options(${PROJECT_NAME}.elf PRIVATE
     -T${LINKER_SCRIPT}
@@ -84,13 +98,13 @@ add_custom_command(TARGET ${PROJECT_NAME}.elf POST_BUILD
 add_dependencies(${PROJECT_NAME}.elf git_info_check)
 
 # Explicitly mark git_info.h as a dependency for sources that include it
-set_source_files_properties(
-    ${CMAKE_CURRENT_SOURCE_DIR}/main.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/console.c
+set_source_files_properties(main.c
     PROPERTIES OBJECT_DEPENDS ${CMAKE_BINARY_DIR}/Application/inc/git_info.h
 )
 
-# Flash target
+# ============================================
+# Flash Targets
+# ============================================
 set(STM32_PROG "/Applications/STMicroelectronics/STM32Cube/STM32CubeProgrammer/STM32CubeProgrammer.app/Contents/MacOs/bin/STM32_Programmer_CLI")
 
 add_custom_target(flash

@@ -18,6 +18,7 @@ static volatile uint32_t scheduler_ticks = 0;
 // This gets called every 1ms by TIM6
 static void scheduler_tick_callback(TIM_Handle *handle)
 {
+    UNUSED(handle);
     scheduler_ticks++;
 
     // Check all tasks
@@ -64,7 +65,7 @@ SYS_Status Task_Scheduler_Init(void)
     __NVIC_SetPriority(TIM2_IRQn, 8);
     __NVIC_EnableIRQ(TIM2_IRQn);
 
-    PRINT_INFO("Starting task scheduler with %u tasks.", task_count);
+    PRINT_INFO("Starting task scheduler with %lu tasks.", task_count);
     return SYS_OK;
 }
 

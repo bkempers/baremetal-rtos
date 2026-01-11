@@ -47,7 +47,7 @@ static int system_handler(int argc, char **argv)
 
     return 0;
 }
-SHELL_COMMAND_REGISTER(system, system_handler, "Access system information");
+SHELL_COMMAND_REGISTER(system, system_handler, "Access system information")
 
 void SystemClock_Config()
 {

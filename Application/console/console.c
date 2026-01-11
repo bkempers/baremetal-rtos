@@ -119,7 +119,7 @@ void Console_Process(void)
     // USART Error Handler Check
     for (int i = 0; i < TRACE_SIZE; i++) {
         if (trace_buffer[i].error_code != 0) {
-            PRINT_INFO("[%.3f] Error: 0x%X\r\n", (trace_buffer[i].timestamp / 1000.0f), trace_buffer[i].error_code);
+            PRINT_INFO("[%.3f] Error: 0x%lX\r\n", (trace_buffer[i].timestamp / 1000.0f), trace_buffer[i].error_code);
 
             trace_buffer[i].timestamp  = 0;
             trace_buffer[i].error_code = 0;
@@ -197,6 +197,7 @@ void HAL_USART_txCpltCallback(USART_Handle *handle)
 
 void HAL_USART_rxCpltCallback(USART_Handle *handle)
 {
+    UNUSED(handle);
     // Read complete
     ringbuffer_put(&rx_buffer, uart_rx_byte);
     HAL_USART_Receiver_IT(&usart3, &uart_rx_byte, 1);
@@ -205,6 +206,7 @@ void HAL_USART_rxCpltCallback(USART_Handle *handle)
 void HAL_USART_txrxCpltCallback(USART_Handle *handle)
 {
     // TX/RX complete
+    UNUSED(handle);
 }
 
 void HAL_USART_errorCallback(USART_Handle *handle)
@@ -217,6 +219,7 @@ void HAL_USART_errorCallback(USART_Handle *handle)
 
     if (handle->errorCode & USART_ERROR_ORE) {
         char tmp = (char) (handle->Instance->RDR & 0xFF);
+        UNUSED(tmp);
     }
 
     handle->errorCode = USART_ERROR_NONE;
@@ -242,7 +245,7 @@ static int parse_args(char *line, char *argv[], int max_args)
 
     while (*p && argc < max_args) {
         // Skip whitespace
-        while (*p && isspace(*p))
+        while (*p && isspace((unsigned char)*p))
             p++;
         if (!*p)
             break;
@@ -251,7 +254,7 @@ static int parse_args(char *line, char *argv[], int max_args)
         argv[argc++] = p;
 
         // Find argument end
-        while (*p && !isspace(*p))
+        while (*p && !isspace((unsigned char)*p))
             p++;
 
         // Null-terminate

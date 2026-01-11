@@ -1,7 +1,6 @@
 #include <string.h>
 
 #include "display.h"
-#include "drivers/display/st7789/st7789.h"
 #include "stm32h7rs_hal_gpio.h"
 #include "stm32h7rs_hal_rcc.h"
 #include "system.h"
@@ -36,7 +35,7 @@ static int display_handler(int argc, char **argv)
 
     return 0;
 }
-SHELL_COMMAND_REGISTER(display, display_handler, "Access LED display information");
+SHELL_COMMAND_REGISTER(display, display_handler, "Access LED display information")
 
 SYS_Status Display_Init()
 {
@@ -114,7 +113,7 @@ SYS_Status Display_Init()
         return SYS_ERROR;
     }
 
-    PRINT_INFO("Initialized ST7789 (0x%X) display module successfully.", display_id);
+    PRINT_INFO("Initialized ST7789 (0x%lX) display module successfully.", display_id);
     return SYS_OK;
 }
 
@@ -138,6 +137,8 @@ void LVGL_Display_Init() {
 }
 
 static void Display_Flush(lv_display_t * disp, const lv_area_t * area, uint8_t * px_buf) {
+    UNUSED(area);
+    UNUSED(px_buf);
     /* Show the rendered image on the display */
     //my_display_update(area, px_buf);
 

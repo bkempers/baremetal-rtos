@@ -6,7 +6,7 @@ set(CMAKE_TOOLCHAIN_FILE ${CMAKE_SOURCE_DIR}/cmake/stm32h7rs_toolchain.cmake)
 # LVGL Configuration for v9.4
 # ============================================
 set(LV_BUILD_CONF_PATH 
-    ${CMAKE_SOURCE_DIR}/Application/inc/lv_conf.h
+    ${CMAKE_SOURCE_DIR}/Application/display/lv_conf.h
     CACHE STRING "LVGL config path" FORCE
 )
 

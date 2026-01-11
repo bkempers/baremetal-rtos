@@ -57,7 +57,7 @@ static int bme680_handler(int argc, char **argv)
 
     return 0;
 }
-SHELL_COMMAND_REGISTER(bme680, bme680_handler, "Access BME680 sensor information");
+SHELL_COMMAND_REGISTER(bme680, bme680_handler, "Access BME680 sensor information")
 
 static void I2C_Scan(void)
 {

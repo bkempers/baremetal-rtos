@@ -13,7 +13,7 @@
 #include "lvgl.h"
 
 #include "console.h"
-#include "drivers/display/st7789/st7789.h"
+#include "st7789.h"
 #include "shell_command.h"
 #include "system.h"
 

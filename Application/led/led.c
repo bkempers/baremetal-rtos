@@ -60,7 +60,7 @@ static int led_handler(int argc, char **argv)
 
     return 0;
 }
-SHELL_COMMAND_REGISTER(led, led_handler, "LED Module");
+SHELL_COMMAND_REGISTER(led, led_handler, "LED Module")
 
 void Led_Init(void)
 {
