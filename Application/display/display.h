@@ -10,19 +10,19 @@
 #include "stm32h7rs_hal_rcc.h"
 #include "stm32h7rs_hal_spi.h"
 
-#include "lvgl.h"
+// #include "lvgl.h"
 
 #include "console.h"
 #include "st7789.h"
 #include "shell_command.h"
 #include "system.h"
 
-SYS_Status Display_Init();
+SYS_Status Display_Init(void);
 
-void LVGL_Display_Init();
-void LVGL_Display_Task();
+// void LVGL_Display_Init(void);
+// void LVGL_Display_Task(void);
 
-bool       Display_ReadID();
+bool       Display_ReadID(void);
 
 void Display_TxCpltCallback(SPI_Handle *handle);
 void Display_RxCpltCallback(SPI_Handle *handle);

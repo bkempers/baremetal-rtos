@@ -1,17 +1,17 @@
-# ============================================
-# LVGL Configuration
-# ============================================
-message("-- Adding LVGL v9.4")
-set(LV_CONF_BUILD_DISABLE_EXAMPLES ON CACHE BOOL "" FORCE)
-set(LV_CONF_BUILD_DISABLE_DEMOS ON CACHE BOOL "" FORCE)
-
-set(CONFIG_LV_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-set(CONFIG_LV_BUILD_DEMOS OFF CACHE BOOL "" FORCE)
-add_subdirectory(external/lvgl)
-
-target_include_directories(lvgl SYSTEM PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/inc
-)
+# # ============================================
+# # LVGL Configuration
+# # ============================================
+# message("-- Adding LVGL v9.4")
+# set(LV_CONF_BUILD_DISABLE_EXAMPLES ON CACHE BOOL "" FORCE)
+# set(LV_CONF_BUILD_DISABLE_DEMOS ON CACHE BOOL "" FORCE)
+#
+# set(CONFIG_LV_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+# set(CONFIG_LV_BUILD_DEMOS OFF CACHE BOOL "" FORCE)
+# add_subdirectory(external/lvgl)
+#
+# target_include_directories(lvgl SYSTEM PUBLIC
+#     ${CMAKE_CURRENT_SOURCE_DIR}/inc
+# )
 
 # ============================================
 # Common Configuration Interface Library
@@ -32,7 +32,7 @@ target_include_directories(common INTERFACE
 
 target_link_libraries(common INTERFACE
     HAL
-    lvgl
+    # lvgl
 )
 
 add_subdirectory(console)
@@ -105,16 +105,24 @@ set_source_files_properties(main.c
 # ============================================
 # Flash Targets
 # ============================================
-set(STM32_PROG "/Applications/STMicroelectronics/STM32Cube/STM32CubeProgrammer/STM32CubeProgrammer.app/Contents/MacOs/bin/STM32_Programmer_CLI")
+set(STLINK_GDBSERVER "/Applications/STM32CubeIDE.app/Contents/Eclipse/plugins/com.st.stm32cube.ide.mcu.externaltools.stlink-gdb-server.macos64_2.2.200.202505060755/tools/bin/ST-LINK_gdbserver")
+set(STM32_PROGRAMMER_DIR "/Applications/STMicroelectronics/STM32Cube/STM32CubeProgrammer/STM32CubeProgrammer.app/Contents/MacOs/bin")
+set(STM32_PROGRAMMER "${STM32_PROGRAMMER_DIR}/STM32_Programmer_CLI")
+set(EXTERNAL_LOADER "${CMAKE_SOURCE_DIR}/MX25UW25645G_NUCLEO-H7S3L8.stldr")
+set(FLASH_WRAPPER "${CMAKE_SOURCE_DIR}/scripts/print_flash.sh")
 
 add_custom_target(flash
-    COMMAND ${STM32_PROG} -c port=SWD freq=950 mode=UR reset=HWrst -w ${PROJECT_NAME}.elf -v -rst -q
+    COMMAND ${STM32_PROGRAMMER} 
+        -c port=SWD freq=950 mode=UR reset=HWrst
+        # -el ${EXTERNAL_LOADER}
+        -w ${PROJECT_NAME}.elf
+        -v -rst -q
     DEPENDS ${PROJECT_NAME}.elf
     COMMENT "Flashing ${PROJECT_NAME}.elf"
 )
 
 add_custom_target(erase
-    COMMAND ${STM32_PROG} -c port=SWD -e all
+    COMMAND ${STM32_PROGRAMMER} -c port=SWD -e all
     COMMENT "Erasing flash"
 )
 
@@ -126,15 +134,12 @@ add_custom_target(openocd_flash
     COMMENT "Flashing with OpenOCD: ${PROJECT_NAME}.elf"
 )
 
-set(STLINK_GDBSERVER "/Applications/STM32CubeIDE.app/Contents/Eclipse/plugins/com.st.stm32cube.ide.mcu.externaltools.stlink-gdb-server.macos64_2.2.200.202505060755/tools/bin/ST-LINK_gdbserver")
-set(STM32_PROG_DIR "/Applications/STMicroelectronics/STM32Cube/STM32CubeProgrammer/STM32CubeProgrammer.app/Contents/MacOs/bin")
-
 add_custom_target(gdb-server
     COMMAND ${STLINK_GDBSERVER} 
         -p 61234
         -d
         -s
-        -cp ${STM32_PROG_DIR}
+        -cp ${STM32_PROGRAMMER_DIR}
         -m 1
         --halt
     COMMENT "Starting ST-LINK GDB server on port 61234"

@@ -8,9 +8,9 @@
 ST7789_Handle st7789_handle;
 SPI_Handle    spi1_handle;
 
-static void Display_Flush(lv_display_t * disp, const lv_area_t * area, uint8_t * px_buf);
+// static void Display_Flush(lv_display_t * disp, const lv_area_t * area, uint8_t * px_buf);
 
-static void display_usage()
+static void display_usage(void)
 {
     PRINT_INFO("Display module usage: \r\n \
         - info: Get information regarding the display \r\n");
@@ -37,8 +37,10 @@ static int display_handler(int argc, char **argv)
 }
 SHELL_COMMAND_REGISTER(display, display_handler, "Access LED display information")
 
-SYS_Status Display_Init()
+SYS_Status Display_Init(void)
 {
+    PRINT_INFO("trying to initialize st7789 display");
+
     __HAL_RCC_GPIOA_CLK_ENABLE();
     __HAL_RCC_GPIOC_CLK_ENABLE();
 
@@ -91,6 +93,7 @@ SYS_Status Display_Init()
     spi1_handle.Init.FifoThreshold     = SPI_FIFO_THRESHOLD_01DATA;
 
     if (HAL_SPI_Init(&spi1_handle) != HAL_OK) {
+        PRINT_ERROR("error failed to initialize spi/hpdma driver");
         return SYS_ERROR;
     }
 
@@ -117,36 +120,36 @@ SYS_Status Display_Init()
     return SYS_OK;
 }
 
-void LVGL_Display_Init() {
-    lv_init();
-
-    lv_tick_set_cb(HAL_GetTick);
-
-    lv_display_t * display = lv_display_create(320, 240);
-
-    /* LVGL will render to this 1/10 screen sized buffer for 2 bytes/pixel */
-    static uint8_t buf[320 * 240 / 10 * 2];
-    lv_display_set_buffers(display, buf, NULL, sizeof(buf), LV_DISPLAY_RENDER_MODE_PARTIAL);
-
-    /* This callback will display the rendered image */
-    lv_display_set_flush_cb(display, Display_Flush);
-
-    /* Create widgets */
-    lv_obj_t * label = lv_label_create(lv_screen_active());
-    lv_label_set_text(label, "Hello LVGL!");
-}
-
-static void Display_Flush(lv_display_t * disp, const lv_area_t * area, uint8_t * px_buf) {
-    UNUSED(area);
-    UNUSED(px_buf);
-    /* Show the rendered image on the display */
-    //my_display_update(area, px_buf);
-
-    /* Indicate that the buffer is available.
-     * If DMA were used, call in the DMA complete interrupt. */
-    lv_display_flush_ready(disp);
-}
-
-void LVGL_Display_Task() {
-    lv_timer_handler();
-}
+// void LVGL_Display_Init(void) {
+//     lv_init();
+//
+//     lv_tick_set_cb(HAL_GetTick);
+//
+//     lv_display_t * display = lv_display_create(320, 240);
+//
+//     /* LVGL will render to this 1/10 screen sized buffer for 2 bytes/pixel */
+//     static uint8_t buf[320 * 240 / 10 * 2];
+//     lv_display_set_buffers(display, buf, NULL, sizeof(buf), LV_DISPLAY_RENDER_MODE_PARTIAL);
+//
+//     /* This callback will display the rendered image */
+//     lv_display_set_flush_cb(display, Display_Flush);
+//
+//     /* Create widgets */
+//     lv_obj_t * label = lv_label_create(lv_screen_active());
+//     lv_label_set_text(label, "Hello LVGL!");
+// }
+//
+// static void Display_Flush(lv_display_t * disp, const lv_area_t * area, uint8_t * px_buf) {
+//     UNUSED(area);
+//     UNUSED(px_buf);
+//     /* Show the rendered image on the display */
+//     //my_display_update(area, px_buf);
+//
+//     /* Indicate that the buffer is available.
+//      * If DMA were used, call in the DMA complete interrupt. */
+//     lv_display_flush_ready(disp);
+// }
+//
+// void LVGL_Display_Task(void) {
+//     lv_timer_handler();
+// }

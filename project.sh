@@ -131,6 +131,14 @@ rebuild() {
     build_project $1
 }
 
+# Show memory usage
+show_size() {
+    if [ -f "${BUILD_DIR}/Application/stm_rtos.elf" ]; then
+        print_info "Memory usage:"
+        ./scripts/print_size.sh ${BUILD_DIR}/Application/stm_rtos.elf
+    fi
+}
+
 # Flash to target
 flash() {
     print_msg "Flashing to target..."
@@ -152,15 +160,6 @@ gdb_server() {
     print_info "In another terminal, run: arm-none-eabi-gdb ${BUILD_DIR}/stm_rtos.elf"
     print_info "Then in GDB: target remote :61234"
     cmake --build ${BUILD_DIR} --target gdb-server
-}
-
-# Show memory usage
-show_size() {
-    if [ -f "${BUILD_DIR}/Application/stm_rtos.elf" ]; then
-        print_info "Memory usage:"
-        ./scripts/print_size.sh ${BUILD_DIR}/Application/stm_rtos.elf
-        #arm-none-eabi-size ${BUILD_DIR}/Application/stm_rtos.elf
-    fi
 }
 
 # Connect to STM32 Nucleo board via serial

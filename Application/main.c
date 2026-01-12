@@ -27,8 +27,10 @@ int main(void)
     }
 
     if (Display_Init() == SYS_OK) {
-        LVGL_Display_Init();
-        Scheduler_AddTask(LVGL_Display_Task, 33);
+        // LVGL_Display_Init();
+        // Scheduler_AddTask(LVGL_Display_Task, 33);
+    } else {
+        PRINT_INFO("failed to start display");
     }
 
     Led_Reset();

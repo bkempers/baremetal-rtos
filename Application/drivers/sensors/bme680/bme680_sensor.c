@@ -146,7 +146,7 @@ bool BME680_Sensor_Init()
 
     HAL_DelayMS(500); // Longer delay
 
-    I2C_Scan();
+    // I2C_Scan();
 
     if (BME680_HAL_Init(&bme680_sensor_handle, &i2c1_handler, BME680_I2C_ADDR_SECONDARY) != BME680_OK) {
         PRINT_INFO("Failed to initialize BME680 sensor");
