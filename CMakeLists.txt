@@ -2,13 +2,13 @@ cmake_minimum_required(VERSION 3.20)
 
 set(CMAKE_TOOLCHAIN_FILE ${CMAKE_SOURCE_DIR}/cmake/stm32h7rs_toolchain.cmake)
 
-# ============================================
-# LVGL Configuration for v9.4
-# ============================================
-set(LV_BUILD_CONF_PATH 
-    ${CMAKE_SOURCE_DIR}/Application/display/lv_conf.h
-    CACHE STRING "LVGL config path" FORCE
-)
+# # ============================================
+# # LVGL Configuration for v9.4
+# # ============================================
+# set(LV_BUILD_CONF_PATH 
+#     ${CMAKE_SOURCE_DIR}/Application/display/lv_conf.h
+#     CACHE STRING "LVGL config path" FORCE
+# )
 
 project(stm_rtos LANGUAGES C ASM)
 

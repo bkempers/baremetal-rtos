@@ -174,6 +174,9 @@ typedef struct __SPI_Handle {
 #define SPI_DATASIZE_31BIT (0x0000001EUL)
 #define SPI_DATASIZE_32BIT (0x0000001FUL)
 
+#define SPI_CRC_LENGTH_DATASIZE                       (0x00000000UL)
+#define SPI_CRC_LENGTH_4BIT                           (0x00030000UL)
+
 HAL_Status HAL_SPI_Init(SPI_Handle *handle);
 HAL_Status HAL_SPI_DeInit(SPI_Handle *handle);
 

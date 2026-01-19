@@ -1,4 +1,5 @@
 #include "console.h"
+#include "stm32h7rs_hal_rcc.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -61,16 +62,15 @@ void SystemClock_Config()
         Error_Handler();
     }
 
-    // TODO: disregard PLL for now...
     RCC_PLLInit pll_def;
-    pll_def.PLLState  = RCC_PLL_OFF;
+    pll_def.PLLState  = RCC_PLL_ON;
     pll_def.PLLSource = RCC_OSCILLATOR_TYPE_HSI;
     pll_def.PLLM      = 4;
-    pll_def.PLLN      = 50;
+    pll_def.PLLN      = 12;
     pll_def.PLLP      = 2;
     pll_def.PLLQ      = 2;
     pll_def.PLLR      = 2;
-    pll_def.PLLFRACN  = 0;
+    pll_def.PLLFRACN  = 4096;
     if (HAL_RCC_PLLConfig(&pll_def) != HAL_OK) {
         Error_Handler();
     }

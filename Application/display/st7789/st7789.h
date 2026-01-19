@@ -7,6 +7,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "console.h"
+#include "stdio.h"
+
 /* Display dimensions */
 #define ST7789_WIDTH  170
 #define ST7789_HEIGHT 320
@@ -18,6 +21,7 @@
 #define ST7789_RDDST   0x09 /* Read Display Status */
 #define ST7789_SLPIN   0x10
 #define ST7789_SLPOUT  0x11
+#define ST7789_NORON   0x13
 #define ST7789_INVOFF  0x20
 #define ST7789_INVON   0x21
 #define ST7789_DISPOFF 0x28
@@ -58,6 +62,8 @@ typedef struct {
     uint16_t      rst_pin;
     GPIO_TypeDef *cs_port;
     uint16_t      cs_pin;
+    GPIO_TypeDef *bl_port;
+    uint16_t      bl_pin;
 
     /* Display properties */
     uint16_t width;
@@ -79,7 +85,10 @@ void ST7789_Reset(ST7789_Handle *handle);
 /* Blocking operations (simple, guaranteed to complete) */
 void     ST7789_WriteCommand_Blocking(ST7789_Handle *handle, uint8_t cmd);
 void     ST7789_WriteData_Blocking(ST7789_Handle *handle, const uint8_t *data, uint16_t len);
+void     ST7789_SendCommandData(ST7789_Handle *handle, uint8_t cmd, uint8_t *data, uint16_t len);
 uint32_t ST7789_ReadID_Blocking(ST7789_Handle *handle);
+
+void ST7789_Debug(ST7789_Handle *handle);
 
 /* Interrupt-based operations (async, uses callbacks) */
 void ST7789_WriteCommand_IT(ST7789_Handle *handle, uint8_t cmd, void (*callback)(void));
@@ -89,8 +98,14 @@ void ST7789_FillRect_IT(ST7789_Handle *handle, uint16_t x, uint16_t y, uint16_t 
 /* High-level drawing (uses interrupts internally) */
 void ST7789_FillScreen(ST7789_Handle *handle, uint16_t color);
 void ST7789_DrawPixel(ST7789_Handle *handle, uint16_t x, uint16_t y, uint16_t color);
+
 /* State queries */
 bool ST7789_IsBusy(ST7789_Handle *handle);
 void ST7789_IRQHandler(ST7789_Handle *handle);
+
+void ST7789_Toggle_Backlight(ST7789_Handle *handle, GPIO_PinState state);
+void ST7789_Toggle_ChipSelect(ST7789_Handle *handle, GPIO_PinState state);
+
+void Test_ST7789_Write_Only(ST7789_Handle *st7789_handle);
 
 #endif /* ST7789_DRIVER_H */

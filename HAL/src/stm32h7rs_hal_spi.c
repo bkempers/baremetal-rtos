@@ -44,8 +44,7 @@ HAL_Status HAL_SPI_Init(SPI_Handle *handle)
     Communication speed, First bit, CRC calculation state, CRC Length */
 
     /* SPIx NSS Software Management Configuration */
-    if ((handle->Init.NSS == SPI_NSS_SOFT) && (((handle->Init.Mode == SPI_CFG2_MASTER) && (handle->Init.NSSPolarity == SPI_NSS_POLARITY_LOW)) ||
-                                               ((handle->Init.Mode == SPI_MODE_SLAVE) && (handle->Init.NSSPolarity == SPI_NSS_POLARITY_HIGH)))) {
+    if ((handle->Init.NSS == SPI_NSS_SOFT) && (((handle->Init.Mode == SPI_CFG2_MASTER) && (handle->Init.NSSPolarity == SPI_NSS_POLARITY_LOW)) || ((handle->Init.Mode == SPI_MODE_SLAVE) && (handle->Init.NSSPolarity == SPI_NSS_POLARITY_HIGH)))) {
         SET_BIT(handle->Instance->CR1, SPI_CR1_SSI);
     }
 
@@ -57,14 +56,10 @@ HAL_Status HAL_SPI_Init(SPI_Handle *handle)
     }
 
     /* SPIx CFG1 Configuration */
-    WRITE_REG(handle->Instance->CFG1,
-              (handle->Init.BaudRatePrescaler | handle->Init.CRCCalculation | crc_length | handle->Init.FifoThreshold | handle->Init.DataSize));
+    WRITE_REG(handle->Instance->CFG1, (handle->Init.BaudRatePrescaler | handle->Init.CRCCalculation | crc_length | handle->Init.FifoThreshold | handle->Init.DataSize));
 
     /* SPIx CFG2 Configuration */
-    WRITE_REG(handle->Instance->CFG2,
-              (handle->Init.NSSPMode | handle->Init.TIMode | handle->Init.NSSPolarity | handle->Init.NSS | handle->Init.CLKPolarity |
-               handle->Init.CLKPhase | handle->Init.FirstBit | handle->Init.Mode | handle->Init.MasterInterDataIdleness | handle->Init.Direction |
-               handle->Init.MasterSSIdleness | handle->Init.IOSwap | handle->Init.ReadyMasterManagement | handle->Init.ReadyPolarity));
+    WRITE_REG(handle->Instance->CFG2, (handle->Init.NSSPMode | handle->Init.TIMode | handle->Init.NSSPolarity | handle->Init.NSS | handle->Init.CLKPolarity | handle->Init.CLKPhase | handle->Init.FirstBit | handle->Init.Mode | handle->Init.MasterInterDataIdleness | handle->Init.Direction | handle->Init.MasterSSIdleness | handle->Init.IOSwap | handle->Init.ReadyMasterManagement | handle->Init.ReadyPolarity));
 
     /* Insure that AFCNTR is managed only by Master */
     if ((handle->Init.Mode & SPI_CFG2_MASTER) == SPI_CFG2_MASTER) {
@@ -933,6 +928,18 @@ static void SPI_CloseTransfer(SPI_Handle *handle)
 
 static HAL_Status SPI_WaitOnFlagUntilTimeout(const SPI_Handle *handle, uint32_t Flag, FlagStatus Status, uint32_t Timeout, uint32_t Tickstart)
 {
+        // DEBUG: Check initial state
+    uint32_t sr_initial = handle->Instance->SR;
+    uint32_t flag_state = ((sr_initial & Flag) == Flag) ? SET : RESET;
+    
+    // Can't use PRINT_INFO here, so use a breakpoint or check these in debugger
+    // Or temporarily make these volatile so you can inspect in debugger:
+    volatile uint32_t debug_sr = sr_initial;
+    volatile uint32_t debug_flag = Flag;
+    volatile uint32_t debug_status = Status;
+    volatile uint32_t debug_flag_state = flag_state;
+    volatile uint32_t debug_condition = (flag_state == Status);
+
     /* Wait until flag is set */
     while (((((handle->Instance->SR) & Flag) == Flag) ? SET : RESET) == Status) {
         /* Check for the Timeout */

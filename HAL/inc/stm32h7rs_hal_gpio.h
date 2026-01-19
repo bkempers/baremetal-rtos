@@ -58,7 +58,7 @@ typedef enum {
 #define GPIO_SPEED_FREQ_LOW      0x00u
 #define GPIO_SPEED_FREQ_MED      0x01u
 #define GPIO_SPEED_FREQ_HIGH     0x02u
-#define GPIO_SPEED_FEQ_VERY_HIGH 0x03u
+#define GPIO_SPEED_FREQ_VERY_HIGH 0x03u
 
 #define GPIO_NOPULL_UP 0x00u
 #define GPIO_PULL_UP   0x01u

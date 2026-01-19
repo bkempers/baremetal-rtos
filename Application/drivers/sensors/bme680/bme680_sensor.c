@@ -203,9 +203,10 @@ void BME680_HAL_I2C_ErrorCallback(I2C_Handle *handle)
 
 void BME680_Sensor_Task()
 {
-    PRINT_INFO("Temp: %.2f°C / %.2f°F \r\n \
-        Press: %.2f hPa \r\n \
-        Hum: %.2f%%",
+    PRINT_INFO("BME680 Sensor Data \r\n \
+        - Temp: %.2f°C / %.2f°F \r\n \
+        - Press: %.2f hPa \r\n \
+        - Hum: %.2f%%",
                old_data.temperature, ((old_data.temperature * 1.8) + 32), old_data.pressure, old_data.humidity);
 
     // BME680_StateTypeDef state = BME680_HAL_Process(&bme680_sensor_handle);
@@ -315,9 +316,7 @@ int8_t BME680_HAL_Init(BME680_Handle *handle, I2C_Handle *hi2c, uint8_t i2c_addr
     handle->bme_dev.intf_ptr = handle; // Pass handle, not just I2C
     handle->bme_dev.amb_temp = 25;
 
-    Led_Toggle(1);
     result = bme68x_init(&handle->bme_dev);
-    Led_Toggle(3);
     if (result != BME680_OK) {
         PRINT_INFO("Failed to initialize bme68x driver with result %d", result);
         handle->state = BME680_STATE_ERROR;
