@@ -11,8 +11,12 @@
 #include "stdio.h"
 
 /* Display dimensions */
-#define ST7789_WIDTH  170
-#define ST7789_HEIGHT 320
+#define ST7789_WIDTH  320
+#define ST7789_HEIGHT 170
+
+// Column offset for 5394
+#define ST7789_XSTART  0
+#define ST7789_YSTART  35  // Critical! Display starts at row 35
 
 /* Common commands */
 #define ST7789_NOP     0x00
