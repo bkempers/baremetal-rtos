@@ -1,6 +1,6 @@
 add_library(system STATIC
     system.c
-    sysmem.c
+    # sysmem.c
     syscalls.c
     system.h
 )

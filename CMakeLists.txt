@@ -5,12 +5,12 @@ set(CMAKE_TOOLCHAIN_FILE ${CMAKE_SOURCE_DIR}/cmake/stm32h7rs_toolchain.cmake)
 # # ============================================
 # # LVGL Configuration for v9.4
 # # ============================================
-# set(LV_BUILD_CONF_PATH 
-#     ${CMAKE_SOURCE_DIR}/Application/display/lv_conf.h
-#     CACHE STRING "LVGL config path" FORCE
-# )
+set(LV_BUILD_CONF_PATH 
+    ${CMAKE_SOURCE_DIR}/Application/display/lv_conf.h
+    CACHE STRING "LVGL config path" FORCE
+)
 
-project(stm_rtos LANGUAGES C ASM)
+project(application LANGUAGES C ASM)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -123,4 +123,7 @@ add_custom_target(
 # Subdirectories
 # add_subdirectory(rtos)
 add_subdirectory(HAL)
+add_subdirectory(Boot)
 add_subdirectory(Application)
+
+add_dependencies(application.elf boot.elf)
