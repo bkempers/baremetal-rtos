@@ -10,6 +10,7 @@ NC='\033[0m' # No Color
 
 # Project settings
 BUILD_DIR=".build"
+SCRIPT_DIR="scripts"
 BUILD_TYPE="Debug"
 
 STM32_PROG="/Applications/STMicroelectronics/STM32Cube/STM32CubeProgrammer/STM32CubeProgrammer.app/Contents/MacOs/bin/STM32_Programmer_CLI"
@@ -60,8 +61,10 @@ Commands:
     build           Build the project (default)
     clean           Remove build directory
     rebuild         Clean and build
-    flash           Build and flash to target
-    erase           Erase target flash memory
+    flash           Build and flash to target (boot + application)
+    flash-boot      Build and flash only boot to internal flash
+    flash-app       Build and flash only application to external flash
+    erase           Erase internal and external flash memory
     gdb             Start GDB server
     size            Show memory usage
     serial          Connect to STM32 board via serial (default: 115200 baud)
@@ -133,23 +136,47 @@ rebuild() {
 
 # Show memory usage
 show_size() {
-    if [ -f "${BUILD_DIR}/Application/stm_rtos.elf" ]; then
-        print_info "Memory usage:"
-        ./scripts/print_size.sh ${BUILD_DIR}/Application/stm_rtos.elf
+    print_info "Memory usage:"
+    
+    # Boot binary (internal flash - 32KB limit)
+    if [ -f "${BUILD_DIR}/Boot/boot.elf" ]; then
+        ${SCRIPT_DIR}/print_size.sh "${BUILD_DIR}/Boot/boot.elf" "BOOT" 32768 65536
+        echo ""
+    fi
+    
+    # Application binary (external flash - 256MB, shared RAM)
+    if [ -f "${BUILD_DIR}/Application/application.elf" ]; then
+        ${SCRIPT_DIR}/print_size.sh "${BUILD_DIR}/Application/application.elf" "APPLICATION" 268435456 634880
     fi
 }
 
 # Flash to target
 flash() {
-    print_msg "Flashing to target..."
-    cmake --build ${BUILD_DIR} --target flash || { print_error "Flash failed"; exit 1; }
+    local target=${1:-flash}  # Default to 'flash' (both), or allow 'flash-boot' or 'flash-app'
+    
+    # Make sure we've built first
+    if [ ! -f "${BUILD_DIR}/Boot/boot.elf" ] || [ ! -f "${BUILD_DIR}/Application/application.elf" ]; then
+        print_warning "Binaries not found, building first..."
+        build_project
+    fi
+    
+    print_msg "Flashing to target (${target})..."
+    cmake --build ${BUILD_DIR} --target ${target} || { print_error "Flash failed"; exit 1; }
+    
     show_size
     print_msg "Flash complete!"
 }
 
+# flash() {
+#     print_msg "Flashing to target..."
+#     cmake --build ${BUILD_DIR} --target flash || { print_error "Flash failed"; exit 1; }
+#     show_size
+#     print_msg "Flash complete!"
+# }
+
 # Erase flash
 erase() {
-    print_msg "Erasing target flash..."
+    print_msg "Erasing internal and external flash..."
     cmake --build ${BUILD_DIR} --target erase || { print_error "Erase failed"; exit 1; }
     print_msg "Erase complete!"
 }
@@ -157,7 +184,7 @@ erase() {
 # Start GDB server
 gdb_server() {
     print_msg "Starting GDB server on port 61234..."
-    print_info "In another terminal, run: arm-none-eabi-gdb ${BUILD_DIR}/stm_rtos.elf"
+    print_info "In another terminal, run: arm-none-eabi-gdb ${BUILD_DIR}/application.elf"
     print_info "Then in GDB: target remote :61234"
     cmake --build ${BUILD_DIR} --target gdb-server
 }
@@ -317,7 +344,13 @@ case ${COMMAND} in
         rebuild ${JOBS}
         ;;
     flash)
-        flash ${JOBS}
+        flash "flash" ${JOBS}
+        ;;
+    flash-boot)
+        flash "flash-boot"  # Flash boot only
+        ;;
+    flash-app)
+        flash "flash-app"  # Flash app only
         ;;
     erase)
         erase
