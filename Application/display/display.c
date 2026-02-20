@@ -147,7 +147,7 @@ SYS_Status Display_Init(void)
     st7789_handle.bl_pin   = GPIO_PIN_5;
     ST7789_Init(&st7789_handle);
 
-    ST7789_FillScreen(&st7789_handle, COLOR_WHITE);
+    // ST7789_FillScreen(&st7789_handle, COLOR_WHITE);
 
     uint32_t display_id = ST7789_ReadID_Blocking(&st7789_handle);
     if (display_id == 0) {

@@ -1,8 +1,14 @@
 #include "stm32h7rs_hal_xspi.h"
 #include "stm32h7rs_hal.h"
 #include "stm32h7rs_hal_rcc.h"
+#include "stm32h7s3xx.h"
 
 #define XSPI_TIMEOUT_DEFAULT_VALUE 5000U
+
+#define XSPI_FUNCTIONAL_MODE_INDIRECT_WRITE ((uint32_t)0x00000000)         /*!< Indirect write mode    */
+#define XSPI_FUNCTIONAL_MODE_INDIRECT_READ  ((uint32_t)XSPI_CR_FMODE_0)    /*!< Indirect read mode     */
+#define XSPI_FUNCTIONAL_MODE_AUTO_POLLING   ((uint32_t)XSPI_CR_FMODE_1)    /*!< Automatic polling mode */
+#define XSPI_FUNCTIONAL_MODE_MEMORY_MAPPED  ((uint32_t)XSPI_CR_FMODE)      /*!< Memory-mapped mode     */
 
 /* Private helper functions */
 static HAL_Status XSPI_WaitFlagStateUntilTimeout(XSPI_Handle *handle, uint32_t Flag, 
@@ -26,6 +32,8 @@ HAL_Status HAL_XSPI_Init(XSPI_Handle *handle)
     
     /* Configure DCR1: Device Size */
     handle->Instance->DCR1 = (handle->Init.MemorySize << XSPI_DCR1_DEVSIZE_Pos);
+    handle->Instance->DCR1 |= (handle->Init.MemoryType << XSPI_DCR1_MTYP_Pos);
+    handle->Instance->DCR1 |= (handle->Init.ChipSelectHighTime << XSPI_DCR1_CSHT_Pos);
     
     /* Configure DCR2: Prescaler */
     handle->Instance->DCR2 = (handle->Init.ClockPrescaler << XSPI_DCR2_PRESCALER_Pos);
@@ -33,11 +41,14 @@ HAL_Status HAL_XSPI_Init(XSPI_Handle *handle)
     /* Configure DCR3: CS boundary */
     handle->Instance->DCR3 = 0;
     
-    /* Configure DCR4: CS high time */
-    handle->Instance->DCR4 = handle->Init.ChipSelectHighTime;
+    /* Configure DCR4 Refresh register */
+    handle->Instance->DCR4 = 0;
     
     /* Configure CR: FIFO threshold */
     handle->Instance->CR = (handle->Init.FifoThreshold << XSPI_CR_FTHRES_Pos);
+
+    /* Enable XSPI */
+    handle->Instance->CR |= XSPI_CR_EN;
     
     /* Set state to ready */
     handle->State = HAL_XSPI_STATE_READY;
@@ -84,12 +95,15 @@ HAL_Status HAL_XSPI_Command(XSPI_Handle *handle, XSPI_RegularCmd *cmd, uint32_t 
     handle->ErrorCode = HAL_XSPI_ERROR_NONE;
     
     /* Wait for busy flag to be cleared */
-    if (XSPI_WaitFlagStateUntilTimeout(handle, XSPI_SR_BUSY, 0, timeout) != 0) {
+    if (XSPI_WaitFlagStateUntilTimeout(handle, XSPI_SR_BUSY, 0, timeout) != HAL_OK) {
         handle->State = HAL_XSPI_STATE_ERROR;
         return HAL_ERROR;
     }
     
     /* Disable XSPI for configuration */
+    handle->Instance->CR |= XSPI_CR_ABORT;
+    while (handle->Instance->CR & XSPI_CR_ABORT);
+    while (handle->Instance->SR & XSPI_SR_BUSY);
     handle->Instance->CR &= ~XSPI_CR_EN;
     
     /* Configure CCR register */
@@ -137,9 +151,15 @@ HAL_Status HAL_XSPI_Command(XSPI_Handle *handle, XSPI_RegularCmd *cmd, uint32_t 
     if (cmd->DataLength > 0) {
         handle->Instance->DLR = cmd->DataLength - 1;
     }
-    
-    /* Enable XSPI */
-    handle->Instance->CR |= XSPI_CR_EN;
+
+    /* Send command to IR */
+    handle->Instance->IR = cmd->Instruction;
+  
+    /* Enable CR when there's a data phase */
+    if (cmd->DataMode == HAL_XSPI_IO_MODE_NONE) {
+        /* Enable XSPI */
+        handle->Instance->CR |= XSPI_CR_EN;
+    }
     
     /* Set address if needed */
     if (cmd->AddressMode != HAL_XSPI_IO_MODE_NONE) {
@@ -148,7 +168,7 @@ HAL_Status HAL_XSPI_Command(XSPI_Handle *handle, XSPI_RegularCmd *cmd, uint32_t 
     
     /* If no data phase, wait for completion */
     if (cmd->DataMode == HAL_XSPI_IO_MODE_NONE) {
-        if (XSPI_WaitFlagStateUntilTimeout(handle, XSPI_SR_TCF, 1, timeout) != 0) {
+        if (XSPI_WaitFlagStateUntilTimeout(handle, XSPI_SR_TCF, 1, timeout) != HAL_OK) {
             handle->State = HAL_XSPI_STATE_ERROR;
             return HAL_ERROR;
         }
@@ -178,6 +198,15 @@ HAL_Status HAL_XSPI_Transmit(XSPI_Handle *handle, uint8_t *pData, uint32_t timeo
     }
     
     handle->State = HAL_XSPI_STATE_BUSY;
+
+    // set FMODE to indirect write 0b00
+    handle->Instance->CR |= XSPI_CR_ABORT;
+    while (handle->Instance->CR & XSPI_CR_ABORT);
+    while (handle->Instance->SR & XSPI_SR_BUSY);
+    handle->Instance->CR &= ~XSPI_CR_EN;
+
+    MODIFY_REG(handle->Instance->CR, XSPI_CR_FMODE, XSPI_FUNCTIONAL_MODE_INDIRECT_WRITE);
+    handle->Instance->CR |= XSPI_CR_EN;
     
     /* Transfer data */
     while (data_count < data_length) {
@@ -222,6 +251,15 @@ HAL_Status HAL_XSPI_Receive(XSPI_Handle *handle, uint8_t *pData, uint32_t timeou
     }
     
     handle->State = HAL_XSPI_STATE_BUSY;
+
+    // set FMODE to indirect read 0b01
+    handle->Instance->CR |= XSPI_CR_ABORT;
+    while (handle->Instance->CR & XSPI_CR_ABORT);
+    while (handle->Instance->SR & XSPI_SR_BUSY);
+    handle->Instance->CR &= ~XSPI_CR_EN;
+
+    MODIFY_REG(handle->Instance->CR, XSPI_CR_FMODE, XSPI_FUNCTIONAL_MODE_INDIRECT_READ);
+    handle->Instance->CR |= XSPI_CR_EN;
     
     /* Receive data */
     while (data_count < data_length) {
@@ -282,9 +320,6 @@ HAL_Status HAL_XSPI_MemoryMapped(XSPI_Handle *handle, XSPI_RegularCmd *cmd)
         ccr_reg |= XSPI_CCR_DDTR;
     }
     
-    /* Write instruction */
-    handle->Instance->IR = cmd->Instruction;
-    
     /* Write CCR */
     handle->Instance->CCR = ccr_reg;
 
@@ -295,8 +330,12 @@ HAL_Status HAL_XSPI_MemoryMapped(XSPI_Handle *handle, XSPI_RegularCmd *cmd)
     }
     handle->Instance->TCR = tcr_reg;
     
+    /* Write instruction */
+    handle->Instance->IR = cmd->Instruction;
+
     /* Enable memory-mapped mode */
-    handle->Instance->CR |= XSPI_CR_EN | (3UL << XSPI_CR_FMODE_Pos);
+    MODIFY_REG(handle->Instance->CR, XSPI_CR_FMODE, XSPI_FUNCTIONAL_MODE_MEMORY_MAPPED);
+    handle->Instance->CR |= XSPI_CR_EN;
     
     handle->State = HAL_XSPI_STATE_BUSY;  // Stays busy in memory-mapped mode
     
@@ -321,13 +360,13 @@ HAL_Status HAL_XSPI_MX25UM_Init(XSPI_Handle *handle)
     cmd.DataMode = HAL_XSPI_IO_MODE_NONE;
     cmd.DummyCycles = 0;
     
-    if (HAL_XSPI_Command(handle, &cmd, XSPI_TIMEOUT_DEFAULT_VALUE) != 0) {
-        return -1;
+    if (HAL_XSPI_Command(handle, &cmd, XSPI_TIMEOUT_DEFAULT_VALUE) != HAL_OK) {
+        return HAL_ERROR;
     }
     
     cmd.Instruction = 0x99;  // Reset Device
-    if (HAL_XSPI_Command(handle, &cmd, XSPI_TIMEOUT_DEFAULT_VALUE) != 0) {
-        return -1;
+    if (HAL_XSPI_Command(handle, &cmd, XSPI_TIMEOUT_DEFAULT_VALUE) != HAL_OK) {
+        return HAL_ERROR;
     }
    
     HAL_DelayMS(10);
@@ -338,11 +377,11 @@ HAL_Status HAL_XSPI_MX25UM_Init(XSPI_Handle *handle)
     cmd.DataLength = 3;
     cmd.DataDTRMode = HAL_XSPI_DTR_DISABLE;
     
-    if (HAL_XSPI_Command(handle, &cmd, XSPI_TIMEOUT_DEFAULT_VALUE) != 0) {
+    if (HAL_XSPI_Command(handle, &cmd, XSPI_TIMEOUT_DEFAULT_VALUE) != HAL_OK) {
         return HAL_ERROR;
     }
     
-    if (HAL_XSPI_Receive(handle, id_data, XSPI_TIMEOUT_DEFAULT_VALUE) != 0) {
+    if (HAL_XSPI_Receive(handle, id_data, XSPI_TIMEOUT_DEFAULT_VALUE) != HAL_OK) {
         return HAL_ERROR;
     }
     
@@ -356,11 +395,16 @@ HAL_Status HAL_XSPI_MX25UM_Init(XSPI_Handle *handle)
     cmd.DataMode = HAL_XSPI_IO_MODE_NONE;
     cmd.DataLength = 0;
     
-    if (HAL_XSPI_Command(handle, &cmd, XSPI_TIMEOUT_DEFAULT_VALUE) != 0) {
+    if (HAL_XSPI_Command(handle, &cmd, XSPI_TIMEOUT_DEFAULT_VALUE) != HAL_OK) {
         return HAL_ERROR;
     }
     
-    HAL_DelayMS(10);
+    uint8_t status = 0;
+    uint32_t timeout = 10000;
+    do {
+        /* send RDSR cmd (0x05), receieve 1 byte into status */
+        timeout--;
+    } while (!(status & 0x02) && timeout);
     
     /* 4. Write CR2 to enable Octal DTR mode */
     cmd.Instruction = 0x72;  // Write Configuration Register 2
@@ -371,12 +415,12 @@ HAL_Status HAL_XSPI_MX25UM_Init(XSPI_Handle *handle)
     cmd.DataMode = HAL_XSPI_IO_MODE_SINGLE;
     cmd.DataLength = 1;
     
-    if (HAL_XSPI_Command(handle, &cmd, XSPI_TIMEOUT_DEFAULT_VALUE) != 0) {
+    if (HAL_XSPI_Command(handle, &cmd, XSPI_TIMEOUT_DEFAULT_VALUE) != HAL_OK) {
         return HAL_ERROR;
     }
     
     reg_data = 0x02;  // Enable DTR OPI mode
-    if (HAL_XSPI_Transmit(handle, &reg_data, XSPI_TIMEOUT_DEFAULT_VALUE) != 0) {
+    if (HAL_XSPI_Transmit(handle, &reg_data, XSPI_TIMEOUT_DEFAULT_VALUE) != HAL_OK) {
         return HAL_ERROR;
     }
     
@@ -395,7 +439,7 @@ HAL_Status HAL_XSPI_MX25UM_Init(XSPI_Handle *handle)
     cmd.DummyCycles = 20;
     cmd.DQSMode = 1;
     
-    if (HAL_XSPI_MemoryMapped(handle, &cmd) != 0) {
+    if (HAL_XSPI_MemoryMapped(handle, &cmd) != HAL_OK) {
         return HAL_ERROR;
     }
     

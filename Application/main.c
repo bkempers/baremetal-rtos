@@ -15,7 +15,10 @@
 
 int main(void)
 {
-    // HAL_Init();
+    volatile uint32_t marker = 0xDEADBEEF;
+    __asm volatile("nop");  // Breakpoint to verify execution
+                        
+    HAL_Init();
     SystemClock_Config();
     __enable_irq();
 
@@ -29,8 +32,6 @@ int main(void)
     if (Display_Init() == SYS_OK) {
         LVGL_Display_Init();
         Scheduler_AddTask(LVGL_Display_Task, 33);
-    } else {
-        PRINT_INFO("failed to start display");
     }
 
     Led_Reset();
@@ -39,7 +40,9 @@ int main(void)
     Scheduler_AddTask(Console_Process, 25);
     Task_Scheduler_Init();
 
-    while (1) {
+    while (1) 
+    {
+
     }
 
     return 1;

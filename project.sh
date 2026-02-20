@@ -184,7 +184,7 @@ erase() {
 # Start GDB server
 gdb_server() {
     print_msg "Starting GDB server on port 61234..."
-    print_info "In another terminal, run: arm-none-eabi-gdb ${BUILD_DIR}/application.elf"
+    print_info "In another terminal, run: arm-none-eabi-gdb ${BUILD_DIR}/Boot/bin.elf"
     print_info "Then in GDB: target remote :61234"
     cmake --build ${BUILD_DIR} --target gdb-server
 }

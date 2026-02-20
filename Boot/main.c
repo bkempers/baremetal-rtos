@@ -3,6 +3,7 @@
 #include "stm32h7rs_hal_rcc.h"
 #include "stm32h7rs_hal_gpio.h"
 #include "stm32h7rs_hal_xspi.h"
+#include "stm32h7s3xx.h"
 
 // Application base address in external flash
 #define APP_ADDRESS 0x70000000
@@ -14,36 +15,38 @@ int boot_xspi_init(void);
 void boot_jump_to_application(void);
 void Error_Handler(void);
 
+static void debug_pre_jump(void) {
+    volatile uint32_t *app_vector = (uint32_t*)0x70000000;
+    
+    __asm volatile("nop");  // Breakpoint here
+}
+
 // XSPI handle
 XSPI_Handle hxspi2;
 
 int main(void)
 {
-    // 1. HAL initialization
     HAL_Init();
     
-    // 2. Configure system clock to 600 MHz using your RCC HAL
     boot_system_clock_config();
-    
-    // 3. Initialize XSPI GPIOs using your GPIO HAL
     boot_xspi_gpio_init();
     
-    // 4. Initialize XSPI peripheral and flash
-    if (boot_xspi_init() != 0) {
-        // Error - could blink LED here
+    if (boot_xspi_init() != HAL_OK) {
         while (1) {
             __NOP();
         }
     }
-    
-    // 5. Enable CPU caches
+   
+    SCB_InvalidateICache();
     SCB_EnableICache();
+
+    SCB_InvalidateDCache();
     SCB_EnableDCache();
+
+    debug_pre_jump();
     
-    // 6. Jump to application
     boot_jump_to_application();
     
-    // Should never reach here
     while (1);
 }
 
@@ -65,10 +68,10 @@ void boot_system_clock_config(void)
     // PLL for 200 MHz: 64 / 4 * 50 / 2 / 2 = 200 MHz
     RCC_PLLInit pll_def;
     pll_def.PLLState  = RCC_PLL_ON;
-    pll_def.PLLSource = RCC_OSCILLATOR_TYPE_HSI;
+    pll_def.PLLSource = RCC_PLLSOURCE_HSI;
     pll_def.PLLM      = 4;   // 64 / 4 = 16 MHz
     pll_def.PLLN      = 50;  // 16 * 50 = 800 MHz
-    pll_def.PLLP      = 2;   // 800 / 2 = 400 MHz
+    pll_def.PLLP      = 4;   // 800 / 4 = 200 MHz
     pll_def.PLLQ      = 2;
     pll_def.PLLR      = 2;
     pll_def.PLLFRACN  = 0;
@@ -96,7 +99,6 @@ void boot_xspi_gpio_init(void)
 {
     GPIO_Init GPIO_InitStruct = {0};
     
-    // Enable GPIO clocks using your HAL
     __HAL_RCC_GPIOB_CLK_ENABLE();
     __HAL_RCC_GPIOD_CLK_ENABLE();
     __HAL_RCC_GPIOE_CLK_ENABLE();
@@ -106,10 +108,11 @@ void boot_xspi_gpio_init(void)
     // CRITICAL: Enable HSLV for XSPI2 Port 2
     __HAL_RCC_SBS_CLK_ENABLE();
     SBS->CCCSR |= SBS_CCCSR_XSPI2_IOHSLV;
+
+    /* Small delay for HSLV to stabilize */
+    for(volatile int i = 0; i < 1000; i++);
     
-    // Configure XSPI2 pins
-    // All pins: Alternate Function, Very High Speed, No Pull
-    
+    /* Configure XSPI2 pins */
     GPIO_InitStruct.Mode = GPIO_MODE_ALT_FUNC_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL_UP;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
@@ -172,28 +175,31 @@ void boot_xspi_gpio_init(void)
 
 int boot_xspi_init(void)
 {
-    // Enable XSPI2 clock
+    __HAL_RCC_XSPIM_CLK_ENABLE();
+    XSPIM->CR |= XSPIM_CR_MUXEN | XSPIM_CR_MODE;
+
     __HAL_RCC_XSPI2_CLK_ENABLE();
+
+    RCC->CCIPR1 = (RCC->CCIPR1 & ~RCC_CCIPR1_XSPI2SEL) | (0U << RCC_CCIPR1_XSPI2SEL_Pos);
     
-    // Configure XSPI handle
+    /* Configure XSPI handle */
     hxspi2.Instance = XSPI2;
     hxspi2.Init.ClockPrescaler = 2;                    // 600MHz / 3 = 200MHz
-    hxspi2.Init.FifoThreshold = 4;
+    hxspi2.Init.FifoThreshold = 1;
     hxspi2.Init.MemorySize = HAL_XSPI_SIZE_256MB;      // 256MB
-    hxspi2.Init.ChipSelectHighTime = 5000;
+    hxspi2.Init.ChipSelectHighTime = 2;                // 2 XSPI clock cycles
     hxspi2.Init.MemoryType = HAL_XSPI_MEMTYPE_MACRONIX;
     
-    // Initialize XSPI peripheral
-    if (HAL_XSPI_Init(&hxspi2) != 0) {
-        return -1;
+    if (HAL_XSPI_Init(&hxspi2) != HAL_OK) {
+        return HAL_ERROR;
     }
     
     // Initialize MX25UM flash (reset, ID check, enable Octal DTR, memory-mapped)
-    if (HAL_XSPI_MX25UM_Init(&hxspi2) != 0) {
-        return -1;
+    if (HAL_XSPI_MX25UM_Init(&hxspi2) != HAL_OK) {
+        return HAL_ERROR;
     }
     
-    return 0;
+    return HAL_OK;
 }
 
 void boot_jump_to_application(void)
