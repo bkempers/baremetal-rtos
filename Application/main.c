@@ -6,7 +6,7 @@
 #include "stm32h7rs_hal_rcc.h"
 #include "stm32h7rs_hal_usart.h"
 
-#include <sensors/bme680/bme680_sensor.h>
+#include <bme680/bme680_sensor.h>
 #include <console.h>
 #include <led.h>
 #include <system.h>
@@ -15,6 +15,9 @@
 
 int main(void)
 {
+    volatile uint32_t marker = 0xDEADBEEF;
+    __asm volatile("nop");  // Breakpoint to verify execution
+                        
     HAL_Init();
     SystemClock_Config();
     __enable_irq();
@@ -27,10 +30,8 @@ int main(void)
     }
 
     if (Display_Init() == SYS_OK) {
-        // LVGL_Display_Init();
-        // Scheduler_AddTask(LVGL_Display_Task, 33);
-    } else {
-        PRINT_INFO("failed to start display");
+        LVGL_Display_Init();
+        Scheduler_AddTask(LVGL_Display_Task, 33);
     }
 
     Led_Reset();
@@ -39,7 +40,9 @@ int main(void)
     Scheduler_AddTask(Console_Process, 25);
     Task_Scheduler_Init();
 
-    while (1) {
+    while (1) 
+    {
+
     }
 
     return 1;

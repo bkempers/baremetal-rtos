@@ -54,6 +54,12 @@ typedef enum {
 #define GPIO_MODE_ALT_FUNC_OD ((MODE_ALT_FUNC << GPIO_MODE_Pos) | (TYPE_OD << GPIO_TYPE_Pos))
 #define GPIO_MODE_ANALOG      (MODE_ANALOG << GPIO_MODE_Pos)
 
+// XSPI Alternate Functions
+#define GPIO_AF9_XSPI1   ((uint8_t)0x09)  /* XSPI1 */
+#define GPIO_AF9_XSPI2   ((uint8_t)0x09)  /* XSPI2 */
+#define GPIO_AF10_XSPI1  ((uint8_t)0x0A)  /* XSPI1 */
+#define GPIO_AF10_XSPI2  ((uint8_t)0x0A)  /* XSPI2 */
+
 #define GPIO_SPEED_Pos           8u
 #define GPIO_SPEED_FREQ_LOW      0x00u
 #define GPIO_SPEED_FREQ_MED      0x01u

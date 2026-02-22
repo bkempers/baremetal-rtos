@@ -10,17 +10,17 @@
 #include "stm32h7rs_hal_rcc.h"
 #include "stm32h7rs_hal_spi.h"
 
-// #include "lvgl.h"
+#include "lvgl.h"
 
 #include "console.h"
-#include "st7789.h"
+#include "st7789/st7789.h"
 #include "shell_command.h"
 #include "system.h"
 
 SYS_Status Display_Init(void);
 
-// void LVGL_Display_Init(void);
-// void LVGL_Display_Task(void);
+void LVGL_Display_Init(void);
+void LVGL_Display_Task(void);
 
 bool       Display_ReadID(void);
 
