@@ -154,13 +154,12 @@ HAL_Status HAL_XSPI_Command(XSPI_Handle *handle, XSPI_RegularCmd *cmd, uint32_t 
 
     /* Send command to IR */
     handle->Instance->IR = cmd->Instruction;
-  
-    /* Enable CR when there's a data phase */
+
     if (cmd->DataMode == HAL_XSPI_IO_MODE_NONE) {
         /* Enable XSPI */
         handle->Instance->CR |= XSPI_CR_EN;
     }
-    
+  
     /* Set address if needed */
     if (cmd->AddressMode != HAL_XSPI_IO_MODE_NONE) {
         handle->Instance->AR = cmd->Address;
@@ -211,7 +210,7 @@ HAL_Status HAL_XSPI_Transmit(XSPI_Handle *handle, uint8_t *pData, uint32_t timeo
     /* Transfer data */
     while (data_count < data_length) {
         /* Wait for FIFO threshold */
-        if (XSPI_WaitFlagStateUntilTimeout(handle, XSPI_SR_FTF, 1, timeout) != 0) {
+        if (XSPI_WaitFlagStateUntilTimeout(handle, XSPI_SR_FTF, 1, timeout) != HAL_OK) {
             handle->State = HAL_XSPI_STATE_ERROR;
             return HAL_TIMEOUT;
         }
@@ -222,7 +221,7 @@ HAL_Status HAL_XSPI_Transmit(XSPI_Handle *handle, uint8_t *pData, uint32_t timeo
     }
     
     /* Wait for transfer complete */
-    if (XSPI_WaitFlagStateUntilTimeout(handle, XSPI_SR_TCF, 1, timeout) != 0) {
+    if (XSPI_WaitFlagStateUntilTimeout(handle, XSPI_SR_TCF, 1, timeout) != HAL_OK) {
         handle->State = HAL_XSPI_STATE_ERROR;
         return HAL_TIMEOUT;
     }
@@ -252,32 +251,30 @@ HAL_Status HAL_XSPI_Receive(XSPI_Handle *handle, uint8_t *pData, uint32_t timeou
     
     handle->State = HAL_XSPI_STATE_BUSY;
 
-    // set FMODE to indirect read 0b01
-    handle->Instance->CR |= XSPI_CR_ABORT;
-    while (handle->Instance->CR & XSPI_CR_ABORT);
-    while (handle->Instance->SR & XSPI_SR_BUSY);
-    handle->Instance->CR &= ~XSPI_CR_EN;
+    /* Clear stale flags before starting */
+    handle->Instance->FCR = XSPI_FCR_CTCF | XSPI_FCR_CTEF | XSPI_FCR_CSMF | XSPI_FCR_CTOF;
 
+    // set FMODE to indirect read 0b01
     MODIFY_REG(handle->Instance->CR, XSPI_CR_FMODE, XSPI_FUNCTIONAL_MODE_INDIRECT_READ);
     handle->Instance->CR |= XSPI_CR_EN;
+
+    /* Wait for transfer complete */
+    if (XSPI_WaitFlagStateUntilTimeout(handle, XSPI_SR_TCF, 1, timeout) != HAL_OK) {
+        handle->State = HAL_XSPI_STATE_ERROR;
+        return HAL_TIMEOUT;
+    }
     
     /* Receive data */
     while (data_count < data_length) {
-        /* Wait for FIFO threshold */
-        if (XSPI_WaitFlagStateUntilTimeout(handle, XSPI_SR_FTF, 1, timeout) != 0) {
-            handle->State = HAL_XSPI_STATE_ERROR;
-            return HAL_TIMEOUT;
-        }
+        // /* Wait for FIFO threshold */
+        // if (XSPI_WaitFlagStateUntilTimeout(handle, XSPI_SR_FTF, 1, timeout) != HAL_OK) {
+        //     handle->State = HAL_XSPI_STATE_ERROR;
+        //     return HAL_TIMEOUT;
+        // }
         
         /* Read data */
         pData[data_count] = *(volatile uint8_t *)&handle->Instance->DR;
         data_count++;
-    }
-    
-    /* Wait for transfer complete */
-    if (XSPI_WaitFlagStateUntilTimeout(handle, XSPI_SR_TCF, 1, timeout) != 0) {
-        handle->State = HAL_XSPI_STATE_ERROR;
-        return HAL_TIMEOUT;
     }
     
     /* Clear transfer complete flag */
