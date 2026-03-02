@@ -8,8 +8,8 @@ _estack = ORIGIN(RAM) + LENGTH(RAM);    /* end of RAM */
 _Min_Heap_Size = 0x200;      /* required amount of heap  */
 _Min_Stack_Size = 0x400;     /* required amount of stack */
 
-/* __FLASH_BEGIN  = 0x70000000;  /* External OctoSPI flash */ */
-/* __FLASH_SIZE   = 0x02000000;  /* 32MB (256MBit) */ */
+/* __FLASH_BEGIN  = 0x70000000;  /* External OctoSPI flash */
+/* __FLASH_SIZE   = 0x02000000;  /* 32MB (256MBit) */
 
 /* Memory definitions */
 MEMORY

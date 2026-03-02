@@ -116,8 +116,8 @@
     - RTOS/**
     - test/vendor/ceedling/vendor/unity/src
     - test/vendor/ceedling/vendor/cmock/src
-  :support:
-    - test/support
+  :support: []
+    # - test/support
   :libraries: []
 
 # You can even specify specific files to add or remove from your test
