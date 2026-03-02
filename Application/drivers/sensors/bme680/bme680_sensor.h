@@ -45,8 +45,6 @@ typedef struct {
     bool                use_gas_sensor;
 } BME680_Handle;
 
-BME680_SensorData old_data;
-
 bool BME680_Sensor_Init(void);
 void BME680_Sensor_Task(void);
 void BME680_Read_Trigger(void);
