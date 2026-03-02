@@ -1,5 +1,5 @@
 CompileFlags:
-  CompilationDatabase: .build/
+  CompilationDatabase: .build/ test/
 Index:
   Background: Build
 Diagnostics:
@@ -7,3 +7,6 @@ Diagnostics:
   MissingIncludes: None
 Completion:
   AllScopes: Yes
+
+If:
+  PathMatch: test/unit/.*
