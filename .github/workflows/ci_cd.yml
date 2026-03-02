@@ -19,7 +19,7 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y gcc make ruby gcovr
-          gem install ceedling -v 1.0.1 --no-document
+          sudo gem install ceedling -v 1.0.1 --no-document
 
       - name: Run tests
         run: ./project.sh test
