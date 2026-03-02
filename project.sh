@@ -338,7 +338,11 @@ build_release() {
 COMMAND=${1:-build}
 shift || true
 
-JOBS=$(sysctl -n hw.ncpu)
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    JOBS=$(sysctl -n hw.ncpu)
+else
+    JOBS=$(nproc)
+fi
 VERBOSE=false
 MODULE_NAME=""
 
