@@ -11,6 +11,7 @@ static volatile bool bme680_running  = false;
 
 BME680_Handle bme680_sensor_handle;
 I2C_Handle    i2c1_handler;
+BME680_SensorData old_data;
 
 static void bme680_usage()
 {
