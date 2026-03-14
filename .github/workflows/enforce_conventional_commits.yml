@@ -1,28 +1,47 @@
----
 name: Conventional Commits
 
 permissions:
   contents: read
+  pull-requests: read # needed to read PR title
 
 on:
   pull_request:
     branches:
       - master
+    types:
+      - opened
+      - edited # re-check when title is updated
+      - synchronize # re-check on new commits (in case title was just fixed)
+      - reopened
 
 jobs:
-  commit-lint:
-    name: Verify Conventional Commits
+  pr-title-lint:
+    name: Verify Conventional Commit
 
-    # Skip this job if this is a release PR
     if: (github.event_name == 'pull_request' && !startsWith(github.event.pull_request.head.ref, 'release-please--'))
 
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with: { fetch-depth: 0 }
-
-      - name: Check Commit Messages
-        uses: wagoid/commitlint-github-action@v6
-        with: { configFile: support/.commitlintrc.yml }
+      - name: Check PR Title
+        uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          # Must match your commitlint type-enum
+          types: |
+            build
+            ci
+            chore
+            docs
+            feat
+            fix
+            perf
+            refactor
+            revert
+            style
+            test
+          requireScope: false # set true if you want scope mandatory
+          subjectPattern: ^[^A-Z].* # disallow sentence-case start (mirrors your subject-case rule)
+          subjectPatternError: |
+            Subject must start with a lowercase letter.
