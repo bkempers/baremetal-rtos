@@ -121,6 +121,6 @@ add_custom_target(
 )
 
 # Subdirectories
-# add_subdirectory(rtos)
+add_subdirectory(rtos)
 add_subdirectory(HAL)
 add_subdirectory(Application)
