@@ -303,7 +303,7 @@ format_code() {
     MODULES=(
         "HAL"
         "Application"
-        "RTOS"
+        "rtos"
     )
 
     for module in "${MODULES[@]}"; do
