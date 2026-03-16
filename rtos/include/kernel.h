@@ -9,4 +9,6 @@ typedef struct tcb {
     struct tcb *next;
 } TCB_t;
 
+void kernel_stack_init(int i);
+
 #endif // KERNEL_H
