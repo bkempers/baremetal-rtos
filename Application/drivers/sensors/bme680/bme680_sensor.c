@@ -1,6 +1,6 @@
 #include "bme680_sensor.h"
 #include "stm32h7rs_hal.h"
-#include "system.h"
+#include "board.h"
 #include <string.h>
 
 // I2C operation tracking

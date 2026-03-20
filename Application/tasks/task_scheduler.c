@@ -4,6 +4,7 @@
 
 #include <stdio.h>
 
+#include "board.h"
 #include "console.h"
 #include "system.h"
 #include "task_scheduler.h"
