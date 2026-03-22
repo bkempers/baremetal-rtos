@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "board.h"
 #include "console.h"
 #include "led.h"
 #include "ringbuffer.h"

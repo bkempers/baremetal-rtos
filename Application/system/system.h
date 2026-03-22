@@ -20,7 +20,4 @@ typedef enum {
     SYS_OK    = 0x1,
 } SYS_Status;
 
-void SystemClock_Config(void);
-void Error_Handler(void);
-
 #endif // SYSTEM_H

@@ -1,8 +1,11 @@
 #ifndef KERNEL_H
 #define KERNEL_H
 
-#include "config.h"
 #include <stdint.h>
+
+#include "config.h"
+
+#define KERNEL_STACK_DEFINE(name, words) static uint32_t name[(words)] __attribute__((aligned(8)))
 
 typedef struct {
     // Software-saved (PendSV)
@@ -29,9 +32,24 @@ typedef struct {
 typedef struct tcb {
     uint32_t *stack_ptr;
     struct tcb *next;
+
+    uint32_t *stack_base;
+
+    const char *name;
 };
 
-void kernel_stack_init(struct tcb *tcb, int32_t *stack, uint32_t stack_words, void (*task)(void));
-uint8_t kernel_add_thread(void (*task)(void), int32_t *stack, uint32_t stack_words);
+void kernel_stack_init(struct tcb *tcb, uint32_t *stack, uint32_t stack_words, void (*task)(void));
+uint8_t kernel_add_thread(void (*task)(void), uint32_t *stack, uint32_t stack_words, const char* name);
+
+void kernel_init(void);
+
+void kernel_launch(void);
+
+// Called from SysTick_Handler
+void    kernel_tick(void);
+
+// Called from tasks
+void    kernel_delay_ms(uint32_t ms);
+void    kernel_yield(void);
 
 #endif // KERNEL_H

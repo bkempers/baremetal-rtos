@@ -6,6 +6,7 @@
 #include "stm32h7rs_hal_rcc.h"
 #include "stm32h7rs_hal_usart.h"
 
+#include <board.h>
 #include <sensors/bme680/bme680_sensor.h>
 #include <console.h>
 #include <led.h>

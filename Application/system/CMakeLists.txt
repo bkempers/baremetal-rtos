@@ -1,4 +1,5 @@
 add_library(system STATIC
+    board.c
     system.c
     sysmem.c
     syscalls.c
