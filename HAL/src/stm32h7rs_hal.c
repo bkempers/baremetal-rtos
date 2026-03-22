@@ -45,7 +45,7 @@ HAL_Status HAL_InitTick(uint32_t tick_priority)
     return ret;
 }
 
-__weak void HAL_IncTick(void)
+void HAL_IncTick(void)
 {
     tick += (uint32_t) tickFreq;
 }

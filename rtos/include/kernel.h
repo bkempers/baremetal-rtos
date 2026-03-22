@@ -17,6 +17,7 @@ typedef struct {
     uint32_t r9;
     uint32_t r10;
     uint32_t r11;
+    uint32_t exc_return;   // LR value — encodes frame type for restore
 
     // Hardware-saved (CPU pushes/pops these automatically)
     uint32_t r0;    // a1 — first argument / return value

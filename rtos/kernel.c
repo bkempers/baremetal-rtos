@@ -57,6 +57,7 @@ void kernel_stack_init(struct tcb *tcb, uint32_t *stack, uint32_t stack_words, v
     frame->r0   = 0;
 
     // Software frame — debug sentinel values
+    frame->exc_return = 0xFFFFFFFDu;   // basic frame — no FPU on first switch
     frame->r11  = 0xAAAAAAAA;
     frame->r10  = 0xAAAAAAAA;
     frame->r9   = 0xAAAAAAAA;
