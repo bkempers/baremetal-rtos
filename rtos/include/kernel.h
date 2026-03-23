@@ -39,6 +39,8 @@ typedef struct tcb {
     const char *name;
 };
 
+extern uint8_t kernel_first_switch;
+
 void kernel_stack_init(struct tcb *tcb, uint32_t *stack, uint32_t stack_words, void (*task)(void));
 uint8_t kernel_add_thread(void (*task)(void), uint32_t *stack, uint32_t stack_words, const char* name);
 

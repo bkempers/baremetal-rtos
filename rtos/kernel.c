@@ -7,6 +7,8 @@ struct tcb tcbs[NUM_THREADS + 1];
 static uint8_t thread_count = 0;
 static uint32_t tick_count = 0;
 
+uint8_t kernel_first_switch = 1;
+
 static uint32_t idle_stack[IDLE_STACK_WORDS];
 
 struct tcb *current_tcb;

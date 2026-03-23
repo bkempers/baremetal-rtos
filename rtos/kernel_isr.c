@@ -11,46 +11,52 @@ void SysTick_Handler(void) {
 
 __attribute__((naked)) void PendSV_Handler(void) {
     __asm volatile (
+        "CPSID   I                      \n"
 
-        /* ── SAVE CURRENT TASK ─────────────────────────────────────────
-           Hardware already saved: xPSR, PC, LR, R12, R3-R0
-           (extended frame also has S0-S15, FPSCR pushed by hardware)  */
+        /* ── Skip save on first switch ─────────────────────────────────
+           On first entry current_tcb->stack_ptr already has the correct
+           initial frame from stack_init — saving PSP here would corrupt it */
+        "LDR     R0, =kernel_first_switch   \n"
+        "LDRB    R1, [R0]                   \n"
+        "CBZ     R1, save_context           \n"  // 0 = not first, go save
+        "MOV     R1, #0                     \n"
+        "STRB    R1, [R0]                   \n"  // clear flag
+        "B       load_next                  \n"  // skip save entirely
 
-        "CPSID   I                  \n"
-        "MRS     R0, PSP            \n"
+        /* ── SAVE CURRENT TASK ──────────────────────────────────────────*/
+        "save_context:                  \n"
+        "MRS     R0, PSP                \n"
 
-        /* Check EXC_RETURN bit 4 — 0 means FPU was active             */
-        "TST     LR, #0x10          \n"
-        "IT      EQ                 \n"
-        "VSTMDBEQ R0!, {S16-S31}    \n"  // push FPU high regs if needed
+        "TST     LR, #0x10              \n"
+        "IT      EQ                     \n"
+        "VSTMDBEQ R0!, {S16-S31}        \n"
 
-        "STMDB   R0!, {R4-R11, LR}  \n"  // push callee-saved + EXC_RETURN
-                                          // LR carries the frame type info
-                                          // needed on restore
+        "STMDB   R0!, {R4-R11, LR}      \n"
 
-        /* Save updated SP into current TCB->stack_ptr (offset 0)      */
-        "LDR     R1, =current_tcb   \n"
-        "LDR     R2, [R1]           \n"
-        "STR     R0, [R2, #0]       \n"
+        "LDR     R1, =current_tcb       \n"
+        "LDR     R2, [R1]               \n"
+        "STR     R0, [R2, #0]           \n"
+        "B       switch_tcb             \n"
 
-        /* ── LOAD NEXT TASK ────────────────────────────────────────────
-           current_tcb->next is at offset 4                            */
+        /* ── LOAD NEXT TASK ─────────────────────────────────────────────*/
+        "load_next:                     \n"
+        "LDR     R1, =current_tcb       \n"
+        "LDR     R2, [R1]               \n"
 
-        "LDR     R3, [R2, #4]       \n"  // R3 = next TCB
-        "STR     R3, [R1]           \n"  // current_tcb = next
-        "LDR     R0, [R3, #0]       \n"  // R0 = next task's stack_ptr
+        "switch_tcb:                    \n"
+        "LDR     R3, [R2, #4]           \n"
+        "STR     R3, [R1]               \n"
+        "LDR     R0, [R3, #0]           \n"
 
-        "LDMIA   R0!, {R4-R11, LR}  \n"  // pop callee-saved + EXC_RETURN
-                                          // LR now has next task's frame type
+        "LDMIA   R0!, {R4-R11, LR}      \n"
 
-        /* Check if next task needs FPU restore                        */
-        "TST     LR, #0x10          \n"
-        "IT      EQ                 \n"
-        "VLDMIAEQ R0!, {S16-S31}    \n"  // pop FPU high regs if needed
+        "TST     LR, #0x10              \n"
+        "IT      EQ                     \n"
+        "VLDMIAEQ R0!, {S16-S31}        \n"
 
-        "MSR     PSP, R0            \n"
-        "CPSIE   I                  \n"
-        "BX      LR                 \n"  // LR = correct EXC_RETURN for next task
+        "MSR     PSP, R0                \n"
+        "CPSIE   I                      \n"
+        "BX      LR                     \n"
         ::: "memory"
     );
 }
