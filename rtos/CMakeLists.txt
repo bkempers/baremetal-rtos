@@ -1,5 +1,6 @@
 add_library(rtos STATIC
     kernel.c
+    kernel_isr.c
 )
 
 target_include_directories(rtos PUBLIC

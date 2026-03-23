@@ -17,6 +17,7 @@ typedef struct {
     uint32_t r9;
     uint32_t r10;
     uint32_t r11;
+    uint32_t exc_return;   // LR value — encodes frame type for restore
 
     // Hardware-saved (CPU pushes/pops these automatically)
     uint32_t r0;    // a1 — first argument / return value
@@ -37,6 +38,8 @@ typedef struct tcb {
 
     const char *name;
 };
+
+extern uint8_t kernel_first_switch;
 
 void kernel_stack_init(struct tcb *tcb, uint32_t *stack, uint32_t stack_words, void (*task)(void));
 uint8_t kernel_add_thread(void (*task)(void), uint32_t *stack, uint32_t stack_words, const char* name);

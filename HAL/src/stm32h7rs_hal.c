@@ -1,9 +1,7 @@
 #include "stm32h7rs_hal.h"
 #include "stm32h7s3xx.h"
 
-
 void board_hal_init(void)   { HAL_Init(); }
-void __weak kernel_tick(void) {}
 
 volatile uint32_t tick;
 uint32_t          tickPrio = (1UL << __NVIC_PRIO_BITS); /* Invalid priority */
@@ -12,6 +10,7 @@ HAL_TickFreq      tickFreq = HAL_TICK_FREQ_DEFAULT;     /* 1KHz */
 HAL_Status HAL_Init(void)
 {
     HAL_Status ret = HAL_OK;
+
     if (HAL_InitTick(HAL_TICK_FREQ_DEFAULT) != HAL_OK) {
         ret = HAL_ERROR;
     }
@@ -36,7 +35,6 @@ HAL_Status HAL_InitTick(uint32_t tick_priority)
     if (SysTick_Config(SystemCoreClock / (1000U / (uint32_t) tickFreq)) == 0U) {
         /* Configure the SysTick IRQ priority */
         if (tick_priority < (1UL << __NVIC_PRIO_BITS)) {
-            NVIC_SetPriority(SysTick_IRQn, tick_priority);
             tickPrio = tick_priority;
         } else {
             ret = HAL_ERROR;
@@ -47,13 +45,7 @@ HAL_Status HAL_InitTick(uint32_t tick_priority)
     return ret;
 }
 
-void SysTick_Handler(void)
-{
-    HAL_IncTick();
-    kernel_tick();
-}
-
-__weak void HAL_IncTick(void)
+void HAL_IncTick(void)
 {
     tick += (uint32_t) tickFreq;
 }

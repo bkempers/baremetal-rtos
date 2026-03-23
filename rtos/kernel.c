@@ -7,6 +7,8 @@ struct tcb tcbs[NUM_THREADS + 1];
 static uint8_t thread_count = 0;
 static uint32_t tick_count = 0;
 
+uint8_t kernel_first_switch = 1;
+
 static uint32_t idle_stack[IDLE_STACK_WORDS];
 
 struct tcb *current_tcb;
@@ -57,6 +59,7 @@ void kernel_stack_init(struct tcb *tcb, uint32_t *stack, uint32_t stack_words, v
     frame->r0   = 0;
 
     // Software frame — debug sentinel values
+    frame->exc_return = 0xFFFFFFFDu;   // basic frame — no FPU on first switch
     frame->r11  = 0xAAAAAAAA;
     frame->r10  = 0xAAAAAAAA;
     frame->r9   = 0xAAAAAAAA;
