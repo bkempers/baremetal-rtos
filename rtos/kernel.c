@@ -111,6 +111,15 @@ void kernel_launch(void) {
     }
     idle->next   = &tcbs[0];     // idle wraps back to first task
     current_tcb  = &tcbs[0];     // start with first task
+    
+    // Switch Thread mode to PSP before pending PendSV
+    // Without this every task runs on MSP — no kernel/task stack separation
+    __set_PSP(__get_MSP());                         // safe placeholder value
+    __set_CONTROL(__get_CONTROL() | 0x02u);         // SPSEL bit: MSP→PSP
+    __ISB();                                        // flush pipeline after CONTROL write
+
+    SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk;
+    __DSB();                                        // ensure write completes before irq enable
 
     // Hand off to PendSV to run first task — never returns
     SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk;
