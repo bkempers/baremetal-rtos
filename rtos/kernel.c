@@ -121,11 +121,7 @@ void kernel_launch(void) {
     SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk;
     __DSB();                                        // ensure write completes before irq enable
 
-    // Hand off to PendSV to run first task — never returns
-    SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk;
     __enable_irq();
-
-    // Unreachable — PendSV fires immediately after enable
     while (1) {}
 }
 
