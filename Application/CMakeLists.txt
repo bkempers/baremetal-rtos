@@ -32,13 +32,14 @@ target_include_directories(common INTERFACE
 
 target_link_libraries(common INTERFACE
     HAL
+    rtos
     # lvgl
 )
 
 add_subdirectory(console)
 add_subdirectory(system)
 add_subdirectory(drivers)
-add_subdirectory(tasks)
+# add_subdirectory(tasks)
 add_subdirectory(tools)
 add_subdirectory(led)
 add_subdirectory(display)
@@ -70,10 +71,11 @@ target_link_libraries(${PROJECT_NAME}.elf PRIVATE
     console
     system
     display
-    tasks
+    # tasks
     tools
     led
     drivers
+    rtos
 )
 
 # ============================================

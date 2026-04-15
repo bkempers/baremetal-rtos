@@ -2,16 +2,16 @@
 
 #include "ringbuffer.h"
 
-static bool ringbuffer_is_free(ringbuffer *_this, const uint32_t size);
-
-static bool ringbuffer_is_free(ringbuffer *_this, const uint32_t size)
-{
-    if (_this->count + size <= RINGBUFF_SIZE) {
-        return true;
-    } else {
-        return false;
-    }
-}
+// static bool ringbuffer_is_free(ringbuffer *_this, const uint32_t size);
+//
+// static bool ringbuffer_is_free(ringbuffer *_this, const uint32_t size)
+// {
+//     if (_this->count + size <= RINGBUFF_SIZE) {
+//         return true;
+//     } else {
+//         return false;
+//     }
+// }
 
 void ringbuffer_init(ringbuffer *_this)
 {
@@ -53,7 +53,7 @@ void ringbuffer_put(ringbuffer *_this, const uint8_t item)
 
 void ringbuffer_put_many(ringbuffer *_this, const uint8_t *items, const uint32_t size)
 {
-    for (int i = 0; i < size; i++) {
+    for (uint32_t i = 0; i < size; i++) {
         ringbuffer_put(_this, items[i]);
     }
 }
