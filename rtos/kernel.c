@@ -5,7 +5,7 @@
 
 struct tcb tcbs[NUM_THREADS + 1];
 static uint8_t thread_count = 0;
-static uint32_t tick_count = 0;
+static volatile uint32_t tick_count = 0;
 
 uint8_t kernel_first_switch = 1;
 
@@ -71,6 +71,7 @@ void kernel_stack_init(struct tcb *tcb, uint32_t *stack, uint32_t stack_words, v
 
     // SP points at the bottom of the frame (r4, lowest address)
     tcb->stack_ptr = (uint32_t *)frame;
+    tcb->stack_base = stack;
 }
 
 uint8_t kernel_add_thread(void (*task)(void), uint32_t *stack, uint32_t stack_words, const char* name) {
@@ -93,7 +94,7 @@ void kernel_init(void) {
     board_hal_init();
 
     // critical for RTOS functionality
-    NVIC_SetPriority(SysTick_IRQn, TICK_PRIORITY);
+    NVIC_SetPriority(SysTick_IRQn, TICK_PRIORITY - 1);
     NVIC_SetPriority(PendSV_IRQn,  TICK_PRIORITY);
 }
 

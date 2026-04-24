@@ -28,7 +28,7 @@ typedef struct {
     uint32_t lr;    // r14 — return address
     uint32_t pc;    // r15 — where execution resumes
     uint32_t xpsr;
-} __attribute__((packed)) stack_frame_t;
+} stack_frame_t;
 
 typedef struct tcb {
     uint32_t *stack_ptr;

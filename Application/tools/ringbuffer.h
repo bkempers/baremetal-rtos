@@ -8,8 +8,8 @@
 
 typedef struct {
     uint8_t           buf[RINGBUFF_SIZE];
-    uint32_t          head;
-    uint32_t          tail;
+    volatile uint32_t head;
+    volatile uint32_t tail;
     volatile uint32_t count;
 } ringbuffer;
 
