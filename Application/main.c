@@ -14,34 +14,66 @@
 #include <task_scheduler.h>
 #include <display.h>
 
+#include <kernel.h>
+
+// Each task gets its own stack
+KERNEL_STACK_DEFINE(led_stack,     128);
+// KERNEL_STACK_DEFINE(console_stack, 256);
+// KERNEL_STACK_DEFINE(bme680_stack,  256);
+
+static void led_task(void) {
+    while (1) {
+        Led_Toggle(1);
+        kernel_delay_ms(50);
+        Led_Toggle(2);
+        kernel_delay_ms(50);
+        Led_Toggle(3);
+        kernel_delay_ms(50);
+    }
+}
+
+// static void console_task(void) {
+//     while (1) {
+//         Console_Process();
+//         kernel_delay_ms(25);
+//     }
+// }
+//
+// static void bme680_task(void) {
+//     while (1) {
+//         BME680_Read_Trigger();
+//         kernel_delay_ms(1000);
+//     }
+// }
+
 int main(void)
 {
     HAL_Init();
     SystemClock_Config();
-    __enable_irq();
 
     Led_Init();
-    Console_Init();
-
-    if (BME680_Sensor_Init()) {
-        Scheduler_AddTask(BME680_Read_Trigger, 1000);
-    }
-
-    if (Display_Init() == SYS_OK) {
-        // LVGL_Display_Init();
-        // Scheduler_AddTask(LVGL_Display_Task, 33);
-    } else {
-        PRINT_INFO("failed to start display");
-    }
-
+    // Console_Init();
+    //
+    // if (BME680_Sensor_Init()) {
+    //     PRINT_INFO("BME680 init failed");
+    // }
+    //
+    // if (Display_Init() == SYS_OK) {
+    //     // LVGL_Display_Init();
+    //     // Scheduler_AddTask(LVGL_Display_Task, 33);
+    // } else {
+    //     PRINT_INFO("failed to start display");
+    // }
+    //
     Led_Reset();
 
-    Scheduler_AddTask(Led_Cycle, 1000);
-    Scheduler_AddTask(Console_Process, 25);
-    Task_Scheduler_Init();
+    // Replace Scheduler_AddTask with kernel_add_thread
+    kernel_add_thread(led_task, led_stack, 128, "led_task_1");
+    // kernel_add_thread(console_task, console_stack, 256);
+    // kernel_add_thread(bme680_task,  bme680_stack,  256);
 
-    while (1) {
-    }
+    // Replaces Task_Scheduler_Init() — does not return
+    kernel_launch();
 
     return 1;
 }

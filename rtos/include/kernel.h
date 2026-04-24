@@ -28,7 +28,7 @@ typedef struct {
     uint32_t lr;    // r14 — return address
     uint32_t pc;    // r15 — where execution resumes
     uint32_t xpsr;
-} __attribute__((packed)) stack_frame_t;
+} stack_frame_t;
 
 typedef struct tcb {
     uint32_t *stack_ptr;
@@ -37,11 +37,11 @@ typedef struct tcb {
     uint32_t *stack_base;
 
     const char *name;
-};
+} tcb_t;
 
 extern uint8_t kernel_first_switch;
 
-void kernel_stack_init(struct tcb *tcb, uint32_t *stack, uint32_t stack_words, void (*task)(void));
+void kernel_stack_init(tcb_t *tcb, uint32_t *stack, uint32_t stack_words, void (*task)(void));
 uint8_t kernel_add_thread(void (*task)(void), uint32_t *stack, uint32_t stack_words, const char* name);
 
 void kernel_init(void);
