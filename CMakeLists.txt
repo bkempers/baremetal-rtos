@@ -2,15 +2,7 @@ cmake_minimum_required(VERSION 3.20)
 
 set(CMAKE_TOOLCHAIN_FILE ${CMAKE_SOURCE_DIR}/cmake/stm32h7rs_toolchain.cmake)
 
-# # ============================================
-# # LVGL Configuration for v9.4
-# # ============================================
-# set(LV_BUILD_CONF_PATH 
-#     ${CMAKE_SOURCE_DIR}/Application/display/lv_conf.h
-#     CACHE STRING "LVGL config path" FORCE
-# )
-
-project(stm_rtos LANGUAGES C ASM)
+project(baremetal_rtos LANGUAGES C ASM)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -23,8 +15,8 @@ add_compile_definitions(
 
 # Global include directories
 include_directories(
-    Core/CMSIS/Device/ST/STM32H7RSxx/Include
-    Core/CMSIS/Core/Include
+    core/CMSIS/Device/ST/STM32H7RSxx/Include
+    core/CMSIS/Core/Include
 )
 
 # Build type
@@ -99,12 +91,12 @@ endif()
 string(TIMESTAMP BUILD_TIMESTAMP "%Y-%m-%d %H:%M:%S" UTC)
 
 # Ensure the include directory exists
-file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/Application/inc)
+file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/application/inc)
 
 # Initial configuration of git_info.h
 configure_file(
     ${CMAKE_SOURCE_DIR}/support/git_info.h.in
-    ${CMAKE_BINARY_DIR}/Application/inc/git_info.h
+    ${CMAKE_BINARY_DIR}/application/inc/git_info.h
     @ONLY
 )
 
@@ -116,11 +108,11 @@ add_custom_target(
         -DSOURCE_DIR=${CMAKE_SOURCE_DIR}
         -DBINARY_DIR=${CMAKE_BINARY_DIR}
         -P ${CMAKE_SOURCE_DIR}/cmake/update_git_info.cmake
-        BYPRODUCTS ${CMAKE_BINARY_DIR}/Application/inc/git_info.h
+        BYPRODUCTS ${CMAKE_BINARY_DIR}/application/inc/git_info.h
     COMMENT "Updating git information..."
 )
 
 # Subdirectories
-add_subdirectory(HAL)
-add_subdirectory(rtos)
-add_subdirectory(Application)
+add_subdirectory(hal)
+add_subdirectory(kernel)
+add_subdirectory(application)
