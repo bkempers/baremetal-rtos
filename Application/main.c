@@ -44,6 +44,38 @@ static void led_task(void)
 //     }
 // }
 
+#include <kernel.h>
+
+// Each task gets its own stack
+KERNEL_STACK_DEFINE(led_stack,     128);
+// KERNEL_STACK_DEFINE(console_stack, 256);
+// KERNEL_STACK_DEFINE(bme680_stack,  256);
+
+static void led_task(void) {
+    while (1) {
+        Led_Toggle(1);
+        kernel_delay_ms(50);
+        Led_Toggle(2);
+        kernel_delay_ms(50);
+        Led_Toggle(3);
+        kernel_delay_ms(50);
+    }
+}
+
+// static void console_task(void) {
+//     while (1) {
+//         Console_Process();
+//         kernel_delay_ms(25);
+//     }
+// }
+//
+// static void bme680_task(void) {
+//     while (1) {
+//         BME680_Read_Trigger();
+//         kernel_delay_ms(1000);
+//     }
+// }
+
 int main(void)
 {
     HAL_Init();
