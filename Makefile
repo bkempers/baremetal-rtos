@@ -1,7 +1,7 @@
 # baremetal-rtos Makefile
 
 BUILD_TYPE ?= Debug
-BUILD_DIR  := .build/$(BUILD_TYPE)
+BUILD_DIR  := build/$(BUILD_TYPE)
 ELF        := $(BUILD_DIR)/application/baremetal_rtos.elf
 JOBS       ?= $(shell nproc 2>/dev/null || sysctl -n hw.ncpu)
 SRC_DIRS   := hal kernel application
@@ -45,7 +45,7 @@ rebuild:
 	@$(MAKE) --no-print-directory build
 
 clean:
-	rm -rf .build compile_commands.json
+	rm -rf build compile_commands.json
 
 flash: build
 	cmake --build $(BUILD_DIR) --target flash

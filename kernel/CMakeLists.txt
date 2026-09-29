@@ -7,4 +7,4 @@ target_include_directories(kernel PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-target_link_libraries(kernel PUBLIC hal)
+target_link_libraries(kernel PUBLIC drivers)

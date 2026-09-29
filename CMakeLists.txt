@@ -113,6 +113,8 @@ add_custom_target(
 )
 
 # Subdirectories
-add_subdirectory(hal)
+add_subdirectory(chip)
+add_subdirectory(boards)
 add_subdirectory(kernel)
+add_subdirectory(drivers)
 add_subdirectory(application)

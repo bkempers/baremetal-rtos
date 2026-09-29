@@ -1,7 +1,7 @@
 #include "include/kernel.h"
 #include "config.h"
 
-#include "stm32h7rs_hal.h"
+#include "hal.h"
 
 struct tcb               tcbs[NUM_THREADS + 1];
 static uint8_t           thread_count = 0;

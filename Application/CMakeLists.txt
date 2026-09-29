@@ -5,27 +5,18 @@ add_library(common INTERFACE)
 
 target_include_directories(common INTERFACE
     ${CMAKE_BINARY_DIR}/application/inc      # For generated headers like git_info.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/inc
-    ${CMAKE_CURRENT_SOURCE_DIR}/console
-    ${CMAKE_CURRENT_SOURCE_DIR}/led
-    ${CMAKE_CURRENT_SOURCE_DIR}/system
-    # ${CMAKE_CURRENT_SOURCE_DIR}/tasks
-    ${CMAKE_CURRENT_SOURCE_DIR}/tools
 )
 
 target_link_libraries(common INTERFACE
-    hal
+    chip
+    boards
+    drivers
     kernel
 )
 
-add_subdirectory(console)
-add_subdirectory(system)
-# add_subdirectory(tasks)
-add_subdirectory(tools)
-add_subdirectory(led)
-
+#TODO: this needs to be dynamic based on pre-set board/chip 
 set(SYSTEM_SOURCES
-    ${CMAKE_SOURCE_DIR}/board/stm32h7rs/startup_stm32h7s3l8hx.c
+    ${CMAKE_SOURCE_DIR}/chip/stm32h7rs/startup.c
     ${CMAKE_SOURCE_DIR}/core/CMSIS/Device/ST/STM32H7RSxx/Source/Templates/system_stm32h7rsxx.c
 )
 
@@ -35,29 +26,26 @@ add_executable(${PROJECT_NAME}.elf
 )
 
 target_sources(${PROJECT_NAME}.elf PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/system/syscalls.c
+    ${CMAKE_SOURCE_DIR}/lib/libc/syscalls.c
 )
 
 # Add application include directories
 target_include_directories(${PROJECT_NAME}.elf PRIVATE
     ${CMAKE_BINARY_DIR}/application/inc
-    ${CMAKE_CURRENT_SOURCE_DIR}/inc
 )
 
 # Link libraries
 target_link_libraries(${PROJECT_NAME}.elf PRIVATE
     common
-    console
-    system
-    tools
-    led
+    drivers
     kernel
 )
 
 # ============================================
 # Linker Configuration
 # ============================================
-set(LINKER_SCRIPT ${CMAKE_SOURCE_DIR}/board/stm32h7rs/linker_script.ld)
+# TODO: need to make dynamic with KConfig/compile defines
+set(LINKER_SCRIPT ${CMAKE_SOURCE_DIR}/chip/stm32h7rs/linker.ld)
 target_link_options(${PROJECT_NAME}.elf PRIVATE
     -T${LINKER_SCRIPT}
     -Wl,-Map=${PROJECT_NAME}.map

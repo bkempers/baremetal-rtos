@@ -1,4 +1,4 @@
 .DS_STORE
-.build/
+build/
 .cache/
 compile_commands.json
