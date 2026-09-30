@@ -35,7 +35,6 @@ $(BUILD_DIR)/CMakeCache.txt:
 build: $(BUILD_DIR)/CMakeCache.txt
 	cmake --build $(BUILD_DIR) -j $(JOBS)
 	@ln -sf $(BUILD_DIR)/compile_commands.json compile_commands.json
-	@$(MAKE) --no-print-directory size
 
 release:
 	@$(MAKE) --no-print-directory BUILD_TYPE=Release build
@@ -56,9 +55,6 @@ erase: $(BUILD_DIR)/CMakeCache.txt
 gdb: $(BUILD_DIR)/CMakeCache.txt
 	@echo "Other terminal: arm-none-eabi-gdb $(ELF) -ex 'target remote :61234'"
 	cmake --build $(BUILD_DIR) --target gdb-server
-
-size:
-	@if [ -f $(ELF) ]; then ./scripts/print_size.sh $(ELF); fi
 
 serial:
 	@test -n "$(PORT)" || { echo "No /dev/tty.usbmodem* found. Set PORT=..."; exit 1; }

@@ -51,6 +51,7 @@ target_link_options(${PROJECT_NAME}.elf PRIVATE
     -Wl,-Map=${PROJECT_NAME}.map
     -Wl,-u,_printf_float
     -Wl,-u,_scanf_float
+    -Wl,--print-memory-usage
 )
 
 # Generate hex and bin files
