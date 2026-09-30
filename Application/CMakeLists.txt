@@ -3,20 +3,17 @@
 # ============================================
 add_library(common INTERFACE)
 
-target_include_directories(common INTERFACE
-    ${CMAKE_BINARY_DIR}/application/inc      # For generated headers like git_info.h
-)
-
 target_link_libraries(common INTERFACE
     chip
     boards
     drivers
     kernel
+    git_version
 )
 
-#TODO: this needs to be dynamic based on pre-set board/chip 
+#TODO: this needs to be dynamic based on pre-set board/chip
+# startup.c is built into libchip.a, so it is deliberately not listed here
 set(SYSTEM_SOURCES
-    ${CMAKE_SOURCE_DIR}/chip/stm32h7rs/startup.c
     ${CMAKE_SOURCE_DIR}/core/CMSIS/Device/ST/STM32H7RSxx/Source/Templates/system_stm32h7rsxx.c
 )
 
@@ -27,11 +24,6 @@ add_executable(${PROJECT_NAME}.elf
 
 target_sources(${PROJECT_NAME}.elf PRIVATE
     ${CMAKE_SOURCE_DIR}/lib/libc/syscalls.c
-)
-
-# Add application include directories
-target_include_directories(${PROJECT_NAME}.elf PRIVATE
-    ${CMAKE_BINARY_DIR}/application/inc
 )
 
 # Link libraries
@@ -61,14 +53,6 @@ add_custom_command(TARGET ${PROJECT_NAME}.elf POST_BUILD
     COMMENT "Building ${PROJECT_NAME}.hex and ${PROJECT_NAME}.bin"
 )
 
-# Make the executable depend on git_info updates
-add_dependencies(${PROJECT_NAME}.elf git_info_check)
-
-# Explicitly mark git_info.h as a dependency for sources that include it
-set_source_files_properties(main.c
-    PROPERTIES OBJECT_DEPENDS ${CMAKE_BINARY_DIR}/application/inc/git_info.h
-)
-
 # ============================================
 # Flash Targets
 # ============================================
@@ -76,7 +60,6 @@ set(STLINK_GDBSERVER "/Applications/STM32CubeIDE.app/Contents/Eclipse/plugins/co
 set(STM32_PROGRAMMER_DIR "/Applications/STMicroelectronics/STM32Cube/STM32CubeProgrammer/STM32CubeProgrammer.app/Contents/MacOs/bin")
 set(STM32_PROGRAMMER "${STM32_PROGRAMMER_DIR}/STM32_Programmer_CLI")
 set(EXTERNAL_LOADER "${CMAKE_SOURCE_DIR}/MX25UW25645G_NUCLEO-H7S3L8.stldr")
-set(FLASH_WRAPPER "${CMAKE_SOURCE_DIR}/scripts/print_flash.sh")
 
 add_custom_target(flash
     COMMAND ${STM32_PROGRAMMER} 

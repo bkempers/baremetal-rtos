@@ -4,6 +4,7 @@
 
 #include "board.h"
 #include "console.h"
+#include "git_version.h"
 #include "led.h"
 #include "ringbuffer.h"
 #include "stm32h7rs_hal.h"
@@ -235,7 +236,7 @@ static void print_setup_information()
     PRINT_INFO("\n===========================");
     PRINT_INFO("STM32H7RS Serial Console");
     PRINT_INFO("VERSION: %u.%u.%u", MAJOR_VER, MINOR_VER, PATCH_VER);
-    PRINT_INFO("GIT BRANCH: %s & HASH: %s", GIT_BRANCH, GIT_COMMIT_SHORT);
+    PRINT_INFO("GIT BRANCH: %s & HASH: %s", GIT_BRANCH, GIT_REV);
     PRINT_INFO("\n===========================\n");
 }
 

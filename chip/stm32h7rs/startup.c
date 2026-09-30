@@ -1,22 +1,25 @@
 #include <stdint.h>
 
-#define SRAM_START (0x20000000U)
-#define SRAM_SIZE (32U * 1024U)
-#define SRAM_END (SRAM_START + SRAM_SIZE)
+#define SRAM_START                 (0x20000000U)
+#define SRAM_SIZE                  (32U * 1024U)
+#define SRAM_END                   (SRAM_START + SRAM_SIZE)
 #define STACK_POINTER_INIT_ADDRESS (SRAM_END)
-#define ISR_VECTOR_SIZE_WORDS 172
+#define ISR_VECTOR_SIZE_WORDS      172
 
 void Reset_Handler(void);
 
 // Default handler
-void Default_Handler(void) {
-    while(1);
+void Default_Handler(void)
+{
+    while (1)
+        ;
 }
 
 // Macro for weak handlers
-#define VECTOR_HANDLER(name) \
-    __attribute__((weak)) void name(void) { \
-        Default_Handler(); \
+#define VECTOR_HANDLER(name)                                                                                                                         \
+    __attribute__((weak)) void name(void)                                                                                                            \
+    {                                                                                                                                                \
+        Default_Handler();                                                                                                                           \
     }
 
 // Cortex-M system exceptions
@@ -111,7 +114,6 @@ VECTOR_HANDLER(USART2_IRHandler)
 VECTOR_HANDLER(USART3_IRHandler)
 VECTOR_HANDLER(UART4_IRHandler)
 VECTOR_HANDLER(UART5_IRHandler)
-VECTOR_HANDLER(UART6_IRHandler)
 VECTOR_HANDLER(UART7_IRHandler)
 VECTOR_HANDLER(UART8_IRHandler)
 VECTOR_HANDLER(I3C1_EV_IRHandler)
@@ -181,205 +183,70 @@ VECTOR_HANDLER(FDCAN2_IT0_IRHandler)
 VECTOR_HANDLER(FDCAN2_IT1_IRHandler)
 
 uint32_t g_pfnVectors[ISR_VECTOR_SIZE_WORDS] __attribute__((section(".isr_vector"))) = {
-  STACK_POINTER_INIT_ADDRESS,
-  // Cortex-M system exceptions
-  (uint32_t)&Reset_Handler,
-  (uint32_t)&NMI_Handler,
-  (uint32_t)&HardFault_Handler,
-  (uint32_t)&MemManage_Handler,
-  (uint32_t)&BusFault_Handler,
-  (uint32_t)&UsageFault_Handler,
-  0,
-  0,
-  0,
-  0,
-  (uint32_t)&SVCall_Handler,
-  (uint32_t)&DebugMonitor_Handler,
-  0,
-  (uint32_t)&PendSV_Handler,
-  (uint32_t)&SysTick_Handler,
+    STACK_POINTER_INIT_ADDRESS,
+    // Cortex-M system exceptions
+    (uint32_t) &Reset_Handler, (uint32_t) &NMI_Handler, (uint32_t) &HardFault_Handler, (uint32_t) &MemManage_Handler, (uint32_t) &BusFault_Handler,
+    (uint32_t) &UsageFault_Handler, 0, 0, 0, 0, (uint32_t) &SVCall_Handler, (uint32_t) &DebugMonitor_Handler, 0, (uint32_t) &PendSV_Handler,
+    (uint32_t) &SysTick_Handler,
 
-  // STM32H7S3L8HX interrupt handlers
-  (uint32_t)&PVD_AVD_IRHandler,
-  0,
-  (uint32_t)&DTS_IRHandler,
-  (uint32_t)&IWDG_IRHandler,
-  (uint32_t)&WWDG_IRHandler,
-  (uint32_t)&RCC_IRHandler,
-  0,
-  0,
-  (uint32_t)&FLASH_IRHandler,
-  (uint32_t)&ECC_FPU_IRHandler,
-  (uint32_t)&FPU_IRHandler,
-  0,
-  0,
-  (uint32_t)&TAMP_IRHandler,
-  0,
-  0,
-  (uint32_t)&EXTI0_IRHandler,
-  (uint32_t)&EXTI1_IRHandler,
-  (uint32_t)&EXTI2_IRHandler,
-  (uint32_t)&EXTI3_IRHandler,
-  (uint32_t)&EXTI4_IRHandler,
-  (uint32_t)&EXTI5_IRHandler,
-  (uint32_t)&EXTI6_IRHandler,
-  (uint32_t)&EXTI7_IRHandler,
-  (uint32_t)&EXTI8_IRHandler,
-  (uint32_t)&EXTI9_IRHandler,
-  (uint32_t)&EXTI10_IRHandler,
-  (uint32_t)&EXTI11_IRHandler,
-  (uint32_t)&EXTI12_IRHandler,
-  (uint32_t)&EXTI13_IRHandler,
-  (uint32_t)&EXTI14_IRHandler,
-  (uint32_t)&EXTI15_IRHandler,
-  (uint32_t)&RTC_IRHandler,
-  (uint32_t)&SAES_IRHandler,
-  (uint32_t)&CRYP_IRHandler,
-  (uint32_t)&PKA_IRHandler,
-  (uint32_t)&HASH_IRHandler,
-  (uint32_t)&RNG_IRHandler,
-  (uint32_t)&ADC1_2_IRHandler,
-  (uint32_t)&GPDMA1_CH0_IRHandler,
-  (uint32_t)&GPDMA1_CH1_IRHandler,
-  (uint32_t)&GPDMA1_CH2_IRHandler,
-  (uint32_t)&GPDMA1_CH3_IRHandler,
-  (uint32_t)&GPDMA1_CH4_IRHandler,
-  (uint32_t)&GPDMA1_CH5_IRHandler,
-  (uint32_t)&GPDMA1_CH6_IRHandler,
-  (uint32_t)&GPDMA1_CH7_IRHandler,
-  (uint32_t)&TIM1_BRK_IRHandler,
-  (uint32_t)&TIM1_UP_IRHandler,
-  (uint32_t)&TIM1_TRG_COM_IRHandler,
-  (uint32_t)&TIM1_CC_IRHandler,
-  (uint32_t)&TIM2_IRHandler,
-  (uint32_t)&TIM3_IRHandler,
-  (uint32_t)&TIM4_IRHandler,
-  (uint32_t)&TIM5_IRHandler,
-  (uint32_t)&TIM6_IRHandler,
-  (uint32_t)&TIM7_IRHandler,
-  (uint32_t)&TIM9_IRHandler,
-  (uint32_t)&SPI1_IRHandler,
-  (uint32_t)&SPI2_IRHandler,
-  (uint32_t)&SPI3_IRHandler,
-  (uint32_t)&SPI4_IRHandler,
-  (uint32_t)&SPI5_IRHandler,
-  (uint32_t)&SPI6_IRHandler,
-  (uint32_t)&HPDMA1_CH0_IRHandler,
-  (uint32_t)&HPDMA1_CH1_IRHandler,
-  (uint32_t)&HPDMA1_CH2_IRHandler,
-  (uint32_t)&HPDMA1_CH3_IRHandler,
-  (uint32_t)&HPDMA1_CH4_IRHandler,
-  (uint32_t)&HPDMA1_CH5_IRHandler,
-  (uint32_t)&HPDMA1_CH6_IRHandler,
-  (uint32_t)&HPDMA1_CH7_IRHandler,
-  (uint32_t)&SAI1_A_IRHandler,
-  (uint32_t)&SAI1_B_IRHandler,
-  (uint32_t)&SAI2_A_IRHandler,
-  (uint32_t)&SAI2_B_IRHandler,
-  (uint32_t)&I2C1_EV_IRHandler,
-  (uint32_t)&I2C1_ER_IRHandler,
-  (uint32_t)&I2C2_EV_IRHandler,
-  (uint32_t)&I2C2_ER_IRHandler,
-  (uint32_t)&I2C3_EV_IRHandler,
-  (uint32_t)&I2C3_ER_IRHandler,
-  (uint32_t)&USART1_IRHandler,
-  (uint32_t)&USART2_IRHandler,
-  (uint32_t)&USART3_IRHandler,
-  (uint32_t)&UART4_IRHandler,
-  (uint32_t)&UART5_IRHandler,
-  (uint32_t)&UART6_IRHandler,
-  (uint32_t)&UART7_IRHandler,
-  (uint32_t)&UART8_IRHandler,
-  (uint32_t)&I3C1_EV_IRHandler,
-  (uint32_t)&I3C1_ER_IRHandler,
-  (uint32_t)&OTG_HS_IRHandler,
-  (uint32_t)&ETH_IRHandler,
-  (uint32_t)&CORDIC_IRHandler,
-  (uint32_t)&GFXTIM_IRHandler,
-  (uint32_t)&DCMIPP_IRHandler,
-  (uint32_t)&LTDC_IRHandler,
-  (uint32_t)&LTDC_ER_IRHandler,
-  (uint32_t)&DMA2D_IRHandler,
-  (uint32_t)&JPEG_IRHandler,
-  (uint32_t)&GFXMMU_IRHandler,
-  (uint32_t)&I3C1_WKUP_IRHandler,
-  (uint32_t)&MCE1_IRHandler,
-  (uint32_t)&MCE2_IRHandler,
-  (uint32_t)&MCE3_IRHandler,
-  (uint32_t)&OSPI1_IRHandler,
-  (uint32_t)&OSPI2_IRHandler,
-  (uint32_t)&FMC_IRHandler,
-  (uint32_t)&SDMMC1_IRHandler,
-  (uint32_t)&SDMMC2_IRHandler,
-  0,
-  0,
-  (uint32_t)&OTG_FS_IRHandler,
-  (uint32_t)&TIM12_IRHandler,
-  (uint32_t)&TIM13_IRHandler,
-  (uint32_t)&TIM14_IRHandler,
-  (uint32_t)&TIM15_IRHandler,
-  (uint32_t)&TIM16_IRHandler,
-  (uint32_t)&TIM17_IRHandler,
-  (uint32_t)&LPTIM1_IRHandler,
-  (uint32_t)&LPTIM2_IRHandler,
-  (uint32_t)&LPTIM3_IRHandler,
-  (uint32_t)&LPTIM4_IRHandler,
-  (uint32_t)&LPTIM5_IRHandler,
-  (uint32_t)&SPDIF_RX_IRHandler,
-  (uint32_t)&MDIOS_IRHandler,
-  (uint32_t)&ADF1_FLT0_IRHandler,
-  (uint32_t)&CRS_IRHandler,
-  (uint32_t)&UCPD1_IRHandler,
-  (uint32_t)&CEC_IRHandler,
-  (uint32_t)&PSSI_IRHandler,
-  (uint32_t)&LPUART1_IRHandler,
-  (uint32_t)&WAKEUP_PIN_IRHandler,
-  (uint32_t)&GPDMA1_CH8_IRHandler,
-  (uint32_t)&GPDMA1_CH9_IRHandler,
-  (uint32_t)&GPDMA1_CH10_IRHandler,
-  (uint32_t)&GPDMA1_CH11_IRHandler,
-  (uint32_t)&GPDMA1_CH12_IRHandler,
-  (uint32_t)&GPDMA1_CH13_IRHandler,
-  (uint32_t)&GPDMA1_CH14_IRHandler,
-  (uint32_t)&GPDMA1_CH15_IRHandler,
-  (uint32_t)&HPDMA1_CH8_IRHandler,
-  (uint32_t)&HPDMA1_CH9_IRHandler,
-  (uint32_t)&HPDMA1_CH10_IRHandler,
-  (uint32_t)&HPDMA1_CH11_IRHandler,
-  (uint32_t)&HPDMA1_CH12_IRHandler,
-  (uint32_t)&HPDMA1_CH13_IRHandler,
-  (uint32_t)&HPDMA1_CH14_IRHandler,
-  (uint32_t)&HPDMA1_CH15_IRHandler,
-  (uint32_t)&GPU2D_IRHandler,
-  (uint32_t)&GPU2D_ER_IRHandler,
-  (uint32_t)&TCACHE_IRHandler,
-  (uint32_t)&FDCAN1_IT0_IRHandler,
-  (uint32_t)&FDCAN1_IT1_IRHandler,
-  (uint32_t)&FDCAN2_IT0_IRHandler,
-  (uint32_t)&FDCAN2_IT1_IRHandler
-};
+    // STM32H7S3L8HX interrupt handlers
+    (uint32_t) &PVD_AVD_IRHandler, 0, (uint32_t) &DTS_IRHandler, (uint32_t) &IWDG_IRHandler, (uint32_t) &WWDG_IRHandler, (uint32_t) &RCC_IRHandler, 0,
+    0, (uint32_t) &FLASH_IRHandler, (uint32_t) &ECC_FPU_IRHandler, (uint32_t) &FPU_IRHandler, 0, 0, (uint32_t) &TAMP_IRHandler, 0, 0,
+    (uint32_t) &EXTI0_IRHandler, (uint32_t) &EXTI1_IRHandler, (uint32_t) &EXTI2_IRHandler, (uint32_t) &EXTI3_IRHandler, (uint32_t) &EXTI4_IRHandler,
+    (uint32_t) &EXTI5_IRHandler, (uint32_t) &EXTI6_IRHandler, (uint32_t) &EXTI7_IRHandler, (uint32_t) &EXTI8_IRHandler, (uint32_t) &EXTI9_IRHandler,
+    (uint32_t) &EXTI10_IRHandler, (uint32_t) &EXTI11_IRHandler, (uint32_t) &EXTI12_IRHandler, (uint32_t) &EXTI13_IRHandler,
+    (uint32_t) &EXTI14_IRHandler, (uint32_t) &EXTI15_IRHandler, (uint32_t) &RTC_IRHandler, (uint32_t) &SAES_IRHandler, (uint32_t) &CRYP_IRHandler,
+    (uint32_t) &PKA_IRHandler, (uint32_t) &HASH_IRHandler, (uint32_t) &RNG_IRHandler, (uint32_t) &ADC1_2_IRHandler, (uint32_t) &GPDMA1_CH0_IRHandler,
+    (uint32_t) &GPDMA1_CH1_IRHandler, (uint32_t) &GPDMA1_CH2_IRHandler, (uint32_t) &GPDMA1_CH3_IRHandler, (uint32_t) &GPDMA1_CH4_IRHandler,
+    (uint32_t) &GPDMA1_CH5_IRHandler, (uint32_t) &GPDMA1_CH6_IRHandler, (uint32_t) &GPDMA1_CH7_IRHandler, (uint32_t) &TIM1_BRK_IRHandler,
+    (uint32_t) &TIM1_UP_IRHandler, (uint32_t) &TIM1_TRG_COM_IRHandler, (uint32_t) &TIM1_CC_IRHandler, (uint32_t) &TIM2_IRHandler,
+    (uint32_t) &TIM3_IRHandler, (uint32_t) &TIM4_IRHandler, (uint32_t) &TIM5_IRHandler, (uint32_t) &TIM6_IRHandler, (uint32_t) &TIM7_IRHandler,
+    (uint32_t) &TIM9_IRHandler, (uint32_t) &SPI1_IRHandler, (uint32_t) &SPI2_IRHandler, (uint32_t) &SPI3_IRHandler, (uint32_t) &SPI4_IRHandler,
+    (uint32_t) &SPI5_IRHandler, (uint32_t) &SPI6_IRHandler, (uint32_t) &HPDMA1_CH0_IRHandler, (uint32_t) &HPDMA1_CH1_IRHandler,
+    (uint32_t) &HPDMA1_CH2_IRHandler, (uint32_t) &HPDMA1_CH3_IRHandler, (uint32_t) &HPDMA1_CH4_IRHandler, (uint32_t) &HPDMA1_CH5_IRHandler,
+    (uint32_t) &HPDMA1_CH6_IRHandler, (uint32_t) &HPDMA1_CH7_IRHandler, (uint32_t) &SAI1_A_IRHandler, (uint32_t) &SAI1_B_IRHandler,
+    (uint32_t) &SAI2_A_IRHandler, (uint32_t) &SAI2_B_IRHandler, (uint32_t) &I2C1_EV_IRHandler, (uint32_t) &I2C1_ER_IRHandler,
+    (uint32_t) &I2C2_EV_IRHandler, (uint32_t) &I2C2_ER_IRHandler, (uint32_t) &I2C3_EV_IRHandler, (uint32_t) &I2C3_ER_IRHandler,
+    (uint32_t) &USART1_IRHandler, (uint32_t) &USART2_IRHandler, (uint32_t) &USART3_IRHandler, (uint32_t) &UART4_IRHandler,
+    (uint32_t) &UART5_IRHandler, (uint32_t) &UART7_IRHandler, (uint32_t) &UART8_IRHandler, (uint32_t) &I3C1_EV_IRHandler,
+    (uint32_t) &I3C1_ER_IRHandler, (uint32_t) &OTG_HS_IRHandler, (uint32_t) &ETH_IRHandler, (uint32_t) &CORDIC_IRHandler,
+    (uint32_t) &GFXTIM_IRHandler, (uint32_t) &DCMIPP_IRHandler, (uint32_t) &LTDC_IRHandler, (uint32_t) &LTDC_ER_IRHandler,
+    (uint32_t) &DMA2D_IRHandler, (uint32_t) &JPEG_IRHandler, (uint32_t) &GFXMMU_IRHandler, (uint32_t) &I3C1_WKUP_IRHandler,
+    (uint32_t) &MCE1_IRHandler, (uint32_t) &MCE2_IRHandler, (uint32_t) &MCE3_IRHandler, (uint32_t) &OSPI1_IRHandler, (uint32_t) &OSPI2_IRHandler,
+    (uint32_t) &FMC_IRHandler, (uint32_t) &SDMMC1_IRHandler, (uint32_t) &SDMMC2_IRHandler, 0, 0, (uint32_t) &OTG_FS_IRHandler,
+    (uint32_t) &TIM12_IRHandler, (uint32_t) &TIM13_IRHandler, (uint32_t) &TIM14_IRHandler, (uint32_t) &TIM15_IRHandler, (uint32_t) &TIM16_IRHandler,
+    (uint32_t) &TIM17_IRHandler, (uint32_t) &LPTIM1_IRHandler, (uint32_t) &LPTIM2_IRHandler, (uint32_t) &LPTIM3_IRHandler,
+    (uint32_t) &LPTIM4_IRHandler, (uint32_t) &LPTIM5_IRHandler, (uint32_t) &SPDIF_RX_IRHandler, (uint32_t) &MDIOS_IRHandler,
+    (uint32_t) &ADF1_FLT0_IRHandler, (uint32_t) &CRS_IRHandler, (uint32_t) &UCPD1_IRHandler, (uint32_t) &CEC_IRHandler, (uint32_t) &PSSI_IRHandler,
+    (uint32_t) &LPUART1_IRHandler, (uint32_t) &WAKEUP_PIN_IRHandler, (uint32_t) &GPDMA1_CH8_IRHandler, (uint32_t) &GPDMA1_CH9_IRHandler,
+    (uint32_t) &GPDMA1_CH10_IRHandler, (uint32_t) &GPDMA1_CH11_IRHandler, (uint32_t) &GPDMA1_CH12_IRHandler, (uint32_t) &GPDMA1_CH13_IRHandler,
+    (uint32_t) &GPDMA1_CH14_IRHandler, (uint32_t) &GPDMA1_CH15_IRHandler, (uint32_t) &HPDMA1_CH8_IRHandler, (uint32_t) &HPDMA1_CH9_IRHandler,
+    (uint32_t) &HPDMA1_CH10_IRHandler, (uint32_t) &HPDMA1_CH11_IRHandler, (uint32_t) &HPDMA1_CH12_IRHandler, (uint32_t) &HPDMA1_CH13_IRHandler,
+    (uint32_t) &HPDMA1_CH14_IRHandler, (uint32_t) &HPDMA1_CH15_IRHandler, (uint32_t) &GPU2D_IRHandler, (uint32_t) &GPU2D_ER_IRHandler,
+    (uint32_t) &TCACHE_IRHandler, (uint32_t) &FDCAN1_IT0_IRHandler, (uint32_t) &FDCAN1_IT1_IRHandler, (uint32_t) &FDCAN2_IT0_IRHandler,
+    (uint32_t) &FDCAN2_IT1_IRHandler};
 
 extern uint32_t _etext, _sdata, _edata, _sbss, _ebss, _sidata;
-void main(void);
+void            main(void);
 
 void Reset_Handler(void)
 {
     // Copy .data from FLASH to RAM
-    uint32_t data_size = (uint32_t)&_edata - (uint32_t)&_sdata;
-    uint8_t *flash_data = (uint8_t*)&_sidata;  // Source in FLASH
-    uint8_t *sram_data = (uint8_t*)&_sdata;    // Destination in RAM
-    
+    uint32_t data_size  = (uint32_t) &_edata - (uint32_t) &_sdata;
+    uint8_t *flash_data = (uint8_t *) &_sidata; // Source in FLASH
+    uint8_t *sram_data  = (uint8_t *) &_sdata;  // Destination in RAM
+
     for (uint32_t i = 0; i < data_size; i++) {
-        sram_data[i] = flash_data[i];  // Copy byte by byte
+        sram_data[i] = flash_data[i]; // Copy byte by byte
     }
-    
+
     // Zero out uninitialized data in .bss
-    uint32_t bss_size = (uint32_t)&_ebss - (uint32_t)&_sbss;
-    uint8_t *bss = (uint8_t*)&_sbss;
-    
+    uint32_t bss_size = (uint32_t) &_ebss - (uint32_t) &_sbss;
+    uint8_t *bss      = (uint8_t *) &_sbss;
+
     for (uint32_t i = 0; i < bss_size; i++) {
-        bss[i] = 0;  // Zero byte by byte
+        bss[i] = 0; // Zero byte by byte
     }
-    
+
     main();
 }
