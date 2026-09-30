@@ -1,6 +1,24 @@
 # baremetal-rtos
 
-A technical approach to designing and implementing a custom HAL (hardware abstraction layer) as well as an RTOS (real-time operating system) on top for preemtive scheduling of tasks.
+A basic learning project to following industry standard practices for firmware development on extensible and modular architectures. Developing a ground-up system for board archiectures, chips, drivers / hardware abstraction layer, real-time operating system, and basic applications.
+
+## Project Architecture
+
+```
+
+==================
+SOC
+ |
+BOARDS
+ |
+DRIVERS / HAL
+ |
+KERNEL (RTOS)
+ |
+APPLICATION
+====================
+
+```
 
 ## Project development roadmap
 
