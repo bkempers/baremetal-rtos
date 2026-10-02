@@ -36,6 +36,7 @@ string(TIMESTAMP BUILD_TIMESTAMP "%Y-%m-%d %H:%M:%S" UTC)
 
 # Subdirectories
 add_subdirectory(lib)
+add_subdirectory(arch)
 add_subdirectory(chip)
 add_subdirectory(boards)
 add_subdirectory(kernel)

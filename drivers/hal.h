@@ -1,7 +1,5 @@
-#ifndef STM32H7RS_HAL_H
-#define STM32H7RS_HAL_H
-
-#include "stm32h7rsxx.h"
+#ifndef HAL_H
+#define HAL_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -37,9 +35,6 @@ typedef enum {
     HAL_LOCKED   = 0x1
 } HAL_Lock;
 
-HAL_Status HAL_Init(void);
-HAL_Status HAL_DeInit(void);
-
 typedef enum {
     HAL_TICK_FREQ_10HZ    = 100U,
     HAL_TICK_FREQ_100HZ   = 10U,
@@ -52,9 +47,12 @@ typedef enum {
 
 #define HAL_MAX_DELAY 0xFFFFFFFFU
 
-extern __IO uint32_t uwTick;
-extern uint32_t      uwTickPrio;
-extern HAL_TickFreq  uwTickFreq;
+extern volatile uint32_t tick;
+extern uint32_t tick_priority;
+extern HAL_TickFreq tick_freq;
+
+HAL_Status HAL_Init(void);
+HAL_Status HAL_DeInit(void);
 
 HAL_Status HAL_InitTick(uint32_t tick_priority);
 void       HAL_IncTick(void);

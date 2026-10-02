@@ -1,9 +1,8 @@
 #ifndef LED_H
 #define LED_H
 
-#include "hal.h"
-#include "hal_gpio.h"
-#include "hal_rcc.h"
+#include "../hal_gpio.h"
+#include "../hal_rcc.h"
 
 // TODO: this needs to be uncoupled from stm32h7rs
 

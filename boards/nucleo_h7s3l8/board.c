@@ -1,5 +1,4 @@
 #include "board.h"
-// #include "led.h"
 #include "hal_rcc.h"
 
 void board_clock_init(void)

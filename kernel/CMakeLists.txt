@@ -1,6 +1,7 @@
 add_library(kernel STATIC
     kernel.c
     kernel_isr.c
+    time.c
 )
 
 target_include_directories(kernel PUBLIC

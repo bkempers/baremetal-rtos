@@ -2,6 +2,11 @@
 add_library(chip STATIC
     stm32h7rs/startup.c
     stm32h7rs/system.c
+
+    stm32h7rs/rcc.c
+    stm32h7rs/tim.c
+    stm32h7rs/gpio.c
+    #i2c/spi/usart/...
 )
 
 target_include_directories(chip PUBLIC

@@ -1,4 +1,4 @@
-#include "hal.h"
+#include "../hal.h"
 #include "stm32h7s3xx.h"
 
 void board_hal_init(void)

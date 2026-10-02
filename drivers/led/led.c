@@ -4,7 +4,7 @@
 #include "led.h"
 
 // TODO: dont have LED driver be coupled to stm32h7rs
-#include "stm32h7rsxx.h"
+// #include "stm32h7rsxx.h"
 
 void led_init(void)
 {
