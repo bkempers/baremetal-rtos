@@ -6,18 +6,7 @@ project(baremetal_rtos LANGUAGES C ASM)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
-
-# Global definitions
-add_compile_definitions(
-    STM32H7S3xx
-    USE_FULL_ASSERT
-)
-
-# Global include directories
-include_directories(
-    core/CMSIS/Device/ST/STM32H7RSxx/Include
-    core/CMSIS/Core/Include
-)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Build type
 if(NOT CMAKE_BUILD_TYPE)
@@ -36,9 +25,11 @@ string(TIMESTAMP BUILD_TIMESTAMP "%Y-%m-%d %H:%M:%S" UTC)
 
 # Subdirectories
 add_subdirectory(lib)
+add_subdirectory(drivers)
 add_subdirectory(arch)
 add_subdirectory(chip)
 add_subdirectory(boards)
 add_subdirectory(kernel)
-add_subdirectory(drivers)
+
+# User application
 add_subdirectory(application)

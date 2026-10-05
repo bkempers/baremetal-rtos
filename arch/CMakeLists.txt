@@ -7,3 +7,5 @@ target_include_directories(arch PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/arm/cortex_m
     core/CMSIS/Core/Include
 )
+
+target_link_libraries(arch PRIVATE chip)

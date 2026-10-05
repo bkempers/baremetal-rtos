@@ -1,17 +1,9 @@
-#ifndef STM32H7RS_HAL_RCC_H
-#define STM32H7RS_HAL_RCC_H
+#ifndef STM32H7RS_CLOCK_H
+#define STM32H7RS_CLOCK_H
 
-#include "hal.h"
-#include "stm32h7rsxx.h"
-
-/*============================================================================
- * Clock Source Definitions
- *===========================================================================*/
-
-#define RCC_OSCILLATOR_TYPE_HSI 0
-#define RCC_OSCILLATOR_TYPE_HSE 1
-#define RCC_OSCILLATOR_TYPE_CSI 2
-#define RCC_OSCILLATOR_TYPE_PLL 3
+#include <stdint.h>
+#include "cmsis_device.h"
+#include "hal_clock.h"
 
 // HSI (High-Speed Internal) - 8, 16, 32, 64 MHz RC oscillator
 #define RCC_HSI_OFF 0
@@ -33,22 +25,10 @@
 #define RCC_PLL_OFF 0
 #define RCC_PLL_ON  1
 
-#define RCC_PLLSOURCE_HSI 0U                     /*!< HSI clock selected as PLL entry clock source */
-#define RCC_PLLSOURCE_CSI RCC_PLLCKSELR_PLLSRC_0 /*!< CSI clock selected as PLL entry clock source */
-#define RCC_PLLSOURCE_HSE RCC_PLLCKSELR_PLLSRC_1 /*!< HSE clock selected as PLL entry clock source */
-#define RCC_PLLSOURCE_NONE                                                                                                                           \
-    RCC_PLLCKSELR_PLLSRC /*!< No clock selected as PLL entry clock source                                                                            \
-                          */
-
-// System clock source
-#define RCC_SYSCLKSOURCE_HSI    0x00000000U
-#define RCC_SYSCLKSOURCE_CSI    0x00000001U
-#define RCC_SYSCLKSOURCE_HSE    0x00000002U
-#define RCC_SYSCLKSOURCE_PLLCLK 0x00000003U
-
-/*============================================================================
- * Clock Prescaler Definitions
- *===========================================================================*/
+#define RCC_PLLSOURCE_HSI  0U                     /*!< HSI clock selected as PLL entry clock source */
+#define RCC_PLLSOURCE_CSI  RCC_PLLCKSELR_PLLSRC_0 /*!< CSI clock selected as PLL entry clock source */
+#define RCC_PLLSOURCE_HSE  RCC_PLLCKSELR_PLLSRC_1 /*!< HSE clock selected as PLL entry clock source */
+#define RCC_PLLSOURCE_NONE RCC_PLLCKSELR_PLLSRC   /*!< No clock selected as PLL entry clock source */
 
 // AHB prescale (divides SYSCLK to get HCLK)
 #define RCC_HCLK_DIV1   (0x00000000U)
@@ -89,64 +69,77 @@
 #define RCC_APB5_DIV8  (RCC_APBCFGR_PPRE5_2 | RCC_APBCFGR_PPRE5_1)
 #define RCC_APB5_DIV16 (RCC_APBCFGR_PPRE5_2 | RCC_APBCFGR_PPRE5_1 | RCC_APBCFGR_PPRE5_0)
 
-/*============================================================================
- * Oscillator Configuration Structure
- *===========================================================================*/
+typedef enum {
+    RCC_SYSCLKSOURCE_HSI = 0,
+    RCC_SYSCLKSOURCE_CSI,
+    RCC_SYSCLKSOURCE_HSE,
+    RCC_SYSCLKSOURCE_PLLCLK
+} clock_source;
 
-typedef struct {
-    uint32_t OscillatorType; // HSI, HSE, LSI, LSE
-    uint32_t HSEState;       // ON, OFF, BYPASS
-    uint32_t HSIState;       // ON, OFF
-    uint32_t HSICalibration; // Calibration value 0-63 (default 32)
-} RCC_OscInit;
+typedef enum {
+    RCC_CLKSOURCE_HCLK = 0,
+    RCC_CLKSOURCE_APB1,
+    RCC_CLKSOURCE_APB2,
+    RCC_CLKSOURCE_APB4,
+    RCC_CLKSOURCE_APB5,
+    RCC_CLKSOURCE_COUNT
+} subsys_clock_source;
 
-/*============================================================================
- * PLL Configuration Structure
- *===========================================================================*/
+// typedef struct {
+//     uint32_t OscillatorType; // HSI, HSE, LSI, LSE
+//     uint32_t HSEState;       // ON, OFF, BYPASS
+//     uint32_t HSIState;       // ON, OFF
+//     uint32_t HSICalibration; // Calibration value 0-63 (default 32)
+// } RCC_OscInit;
+//
+// typedef struct {
+//     uint32_t PLLState;  // ON or OFF
+//     uint32_t PLLSource; // HSI, HSE, CSI
+//     uint32_t PLLM;      // Input divider: 1-63
+//     uint32_t PLLN;      // Multiplier: 4-512
+//     uint32_t PLLP;      // Output divider for PLLP (system clock)
+//     uint32_t PLLQ;      // Output divider for PLLQ (USB, etc)
+//     uint32_t PLLR;      // Output divider for PLLR
+//     uint32_t PLLFRACN;  // Fractional part
+// } RCC_PLLInit;
+//
+// typedef struct {
+//     uint32_t SYSCLKSource;   // HSI, HSE, or PLL
+//     uint32_t AHBCLKDivider;  // HCLK divider
+//     uint32_t APB1CLKDivider; // APB1 divider
+//     uint32_t APB2CLKDivider; // APB2 divider
+//     uint32_t APB4CLKDivider; // APB4 divider
+//     uint32_t APB5CLKDivider; // APB5 divider
+// } RCC_ClkInit;
 
-typedef struct {
-    uint32_t PLLState;  // ON or OFF
-    uint32_t PLLSource; // HSI, HSE, CSI
-    uint32_t PLLM;      // Input divider: 1-63
-    uint32_t PLLN;      // Multiplier: 4-512
-    uint32_t PLLP;      // Output divider for PLLP (system clock)
-    uint32_t PLLQ;      // Output divider for PLLQ (USB, etc)
-    uint32_t PLLR;      // Output divider for PLLR
-    uint32_t PLLFRACN;  // Fractional part
-} RCC_PLLInit;
+struct clock_subsys {
+    subsys_clock_source source;
+    uint32_t divider;
+};
 
-/*============================================================================
- * Clock Configuration Structure
- *===========================================================================*/
+struct clock_cfg {
+    clock_source sysclk_source;
+    uint32_t hse_state;
+    uint32_t hsi_state;
+    uint32_t calibration;
+    uint32_t pll_state;
+    uint32_t pll_source; /* RCC_PLLSOURCE_* — independent of sysclk_source */
+    uint32_t pllm, plln, pllp, pllq, pllr;
+    uint32_t pll_frac;
+    struct clock_subsys subsys[RCC_CLKSOURCE_COUNT];
+};
 
-typedef struct {
-    uint32_t SYSCLKSource;   // HSI, HSE, or PLL
-    uint32_t AHBCLKDivider;  // HCLK divider
-    uint32_t APB1CLKDivider; // APB1 divider
-    uint32_t APB2CLKDivider; // APB2 divider
-    uint32_t APB4CLKDivider; // APB4 divider
-    uint32_t APB5CLKDivider; // APB5 divider
-} RCC_ClkInit;
-
-/*============================================================================
- * API Functions
- *===========================================================================*/
-
-// Oscillator configuration
-HAL_Status HAL_RCC_OscConfig(RCC_OscInit *RCC_OscInitStruct);
-
-// PLL configuration
-HAL_Status HAL_RCC_PLLConfig(RCC_PLLInit *RCC_PLLInitStruct);
-
-// Clock tree configuration
-HAL_Status HAL_RCC_ClockConfig(RCC_ClkInit *RCC_ClkInitStruct, uint32_t FLatency);
+/* All three return 0 on success, negative on failure. */
+int rcc_osc_config(const struct clock_cfg *config);
+int rcc_pll_config(const struct clock_cfg *config);
+int rcc_clock_config(const struct clock_cfg *config);
 
 // Get clock frequencies
-uint32_t HAL_RCC_GetSysClockFreq(void);
-uint32_t HAL_RCC_GetHCLKFreq(void);
-uint32_t HAL_RCC_GetPCLK1Freq(void);
-uint32_t HAL_RCC_GetPCLK2Freq(void);
-uint32_t HAL_RCC_GetPCLK3Freq(void);
+uint32_t rcc_get_hclk_freq(void);
+uint32_t rcc_get_pclk1_freq(void);
+uint32_t rcc_get_pclk2_freq(void);
+uint32_t rcc_get_pclk4_freq(void);
+uint32_t rcc_get_pclk5_freq(void);
 
 /*============================================================================
  * Peripheral Clock Enable/Disable Macros
@@ -196,4 +189,4 @@ uint32_t HAL_RCC_GetPCLK3Freq(void);
 #define __HAL_RCC_I2C2_CLK_ENABLE() (RCC->APB1LENR |= RCC_APB1LENR1_I2C2EN)
 #define __HAL_RCC_I2C3_CLK_ENABLE() (RCC->APB1LENR |= RCC_APB1LENR1_I2C3EN)
 
-#endif // STM32H7RS_HAL_RCC_H
+#endif // STM32H7RS_CLOCK_H

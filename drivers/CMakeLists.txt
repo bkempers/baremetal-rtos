@@ -14,6 +14,8 @@ add_library(drivers STATIC
 #TODO: want to probably make this dynamic and configurable per 'app'
 
 target_include_directories(drivers PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
     # ${CMAKE_CURRENT_SOURCE_DIR}/console
     ${CMAKE_CURRENT_SOURCE_DIR}/led
+    ${CMAKE_SOURCE_DIR}/lib          # compiler.h
 )

@@ -139,13 +139,10 @@ SECTIONS
     /* Define heap end (grows toward stack) */
     _heap_end = ORIGIN(RAM) + LENGTH(RAM) - _Min_Stack_Size;
 
-    /* Remove information from the standard libraries */
-    /DISCARD/ :
-    {
-        libc.a ( * )
-        libm.a ( * )
-        libgcc.a ( * )
-    }
+    /* NOTE: a /DISCARD/ of libc.a/libm.a/libgcc.a used to live here. It threw
+     * away every libc and libgcc section, which breaks memcpy/printf and
+     * contradicts the -Wl,-u,_printf_float on the link line. --gc-sections
+     * already drops what is genuinely unused. */
 
     .ARM.attributes 0 : { *(.ARM.attributes) }
 }
