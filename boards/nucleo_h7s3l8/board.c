@@ -1,54 +1,104 @@
 #include "board.h"
-// #include "led.h"
-#include "hal_rcc.h"
+
+#include "arch.h"
+#include "hal.h"
+#include "hal_clock.h"
+#include "led.h"
+
+#include "stm32h7rs_clock.h"
+
+static const led_obj board_leds[BOARD_LED_COUNT] = {
+    [BOARD_LED_GREEN] = {
+        .gpio = {
+            .gpio      = {.port = GPIO_PORT_D, .pin = LED1_PIN},
+            .mode      = GPIO_MODE_OUTPUT_PP,
+            .speed     = GPIO_SPEED_FREQ_LOW,
+            .pull      = GPIO_NOPULL_UP,
+            .alternate = 0,
+        },
+        .active = GPIO_PIN_SET,
+    },
+    [BOARD_LED_YELLOW] = {
+        .gpio = {
+            .gpio      = {.port = GPIO_PORT_D, .pin = LED2_PIN},
+            .mode      = GPIO_MODE_OUTPUT_PP,
+            .speed     = GPIO_SPEED_FREQ_LOW,
+            .pull      = GPIO_NOPULL_UP,
+            .alternate = 0,
+        },
+        .active = GPIO_PIN_SET,
+    },
+    [BOARD_LED_RED] = {
+        .gpio = {
+            .gpio      = {.port = GPIO_PORT_B, .pin = LED3_PIN},
+            .mode      = GPIO_MODE_OUTPUT_PP,
+            .speed     = GPIO_SPEED_FREQ_LOW,
+            .pull      = GPIO_NOPULL_UP,
+            .alternate = 0,
+        },
+        .active = GPIO_PIN_SET,
+    },
+};
+
+static const struct clock_cfg board_clock_cfg = {
+    .sysclk_source = RCC_SYSCLKSOURCE_HSI,
+
+    .hse_state   = RCC_HSE_OFF,
+    .hsi_state   = RCC_HSI_ON,
+    .calibration = 0,
+
+    .pll_state  = RCC_PLL_ON,
+    .pll_source = RCC_PLLSOURCE_HSI,
+    .pllm       = 4,
+    .plln       = 12,
+    .pllp       = 2,
+    .pllq       = 2,
+    .pllr       = 2,
+    .pll_frac   = 4096,
+
+    .subsys = {
+        [RCC_CLKSOURCE_HCLK] = {.source = RCC_CLKSOURCE_HCLK, .divider = RCC_HCLK_DIV1},
+        [RCC_CLKSOURCE_APB1] = {.source = RCC_CLKSOURCE_APB1, .divider = RCC_APB1_DIV1},
+        [RCC_CLKSOURCE_APB2] = {.source = RCC_CLKSOURCE_APB2, .divider = RCC_APB2_DIV1},
+        [RCC_CLKSOURCE_APB4] = {.source = RCC_CLKSOURCE_APB4, .divider = RCC_APB4_DIV1},
+        [RCC_CLKSOURCE_APB5] = {.source = RCC_CLKSOURCE_APB5, .divider = RCC_APB5_DIV1},
+    },
+};
 
 void board_clock_init(void)
 {
-    SystemClock_Config();
+    clock_init(&board_clock_cfg);
 }
 
-void SystemClock_Config(void)
+int board_init(void)
 {
-    RCC_OscInit oscillator_def;
-    oscillator_def.OscillatorType = RCC_OSCILLATOR_TYPE_HSI;
-    oscillator_def.HSEState       = RCC_HSE_OFF;
-    oscillator_def.HSIState       = RCC_HSI_ON;
-    oscillator_def.HSICalibration = 0;
-    if (HAL_RCC_OscConfig(&oscillator_def) != HAL_OK) {
-        Error_Handler();
+    arch_init(); /* FPU on before any float runs */
+
+    board_clock_init();
+
+    if (led_init(board_leds, BOARD_LED_COUNT) != 0) {
+        return -1;
     }
 
-    RCC_PLLInit pll_def;
-    pll_def.PLLState  = RCC_PLL_ON;
-    pll_def.PLLSource = RCC_OSCILLATOR_TYPE_HSI;
-    pll_def.PLLM      = 4;
-    pll_def.PLLN      = 12;
-    pll_def.PLLP      = 2;
-    pll_def.PLLQ      = 2;
-    pll_def.PLLR      = 2;
-    pll_def.PLLFRACN  = 4096;
-    if (HAL_RCC_PLLConfig(&pll_def) != HAL_OK) {
-        Error_Handler();
-    }
-
-    RCC_ClkInit clkinit_def;
-    clkinit_def.SYSCLKSource   = RCC_SYSCLKSOURCE_HSI;
-    clkinit_def.AHBCLKDivider  = RCC_HCLK_DIV1;
-    clkinit_def.APB1CLKDivider = RCC_APB1_DIV1;
-    clkinit_def.APB2CLKDivider = RCC_APB2_DIV1;
-    clkinit_def.APB4CLKDivider = RCC_APB4_DIV1;
-    clkinit_def.APB5CLKDivider = RCC_APB5_DIV1;
-    if (HAL_RCC_ClockConfig(&clkinit_def, FLASH_ACR_LATENCY_3) != HAL_OK) {
-        Error_Handler();
-    }
+    return 0;
 }
 
-void Error_Handler(void)
+/* Strong override of the __weak default in chip/stm32h7rs/system.c. */
+void system_error_handle(void)
 {
-    __disable_irq();
-    SysTick->CTRL |= SysTick_CTRL_TICKINT_Msk;
-    __enable_irq();
-    while (1) {
-        // Led_Error();
-    }
+    /* clock_init() calls this, which is before led_init() has registered the
+     * table, so drive the pin directly instead of going through led_set(). */
+    static const gpio_init red = {
+        .gpio      = {.port = GPIO_PORT_B, .pin = LED3_PIN},
+        .mode      = GPIO_MODE_OUTPUT_PP,
+        .speed     = GPIO_SPEED_FREQ_LOW,
+        .pull      = GPIO_NOPULL_UP,
+        .alternate = 0,
+    };
+    gpio pin = red.gpio;
+
+    hal_gpio_init(&red);
+    hal_gpio_write(&pin, GPIO_PIN_SET);
+
+    arch_halt();
 }

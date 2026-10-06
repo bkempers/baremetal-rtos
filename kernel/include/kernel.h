@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #include "config.h"
+#include "time.h" /* kernel_tick / kernel_get_tick / kernel_delay_ms */
 
 #define KERNEL_STACK_DEFINE(name, words) static uint32_t name[(words)] __attribute__((aligned(8)))
 
@@ -48,11 +49,7 @@ void kernel_init(void);
 
 void kernel_launch(void);
 
-// Called from SysTick_Handler
-void kernel_tick(void);
-
-// Called from tasks
-void kernel_delay_ms(uint32_t ms);
+// Called from tasks. The tick-based delays live in time.h.
 void kernel_yield(void);
 
 #endif // KERNEL_H

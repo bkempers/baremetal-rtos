@@ -2,7 +2,6 @@
 #define SYSTEM_H
 
 #include "hal.h"
-#include "hal_rcc.h"
 
 #define MAJOR_VER 0
 #define MINOR_VER 0

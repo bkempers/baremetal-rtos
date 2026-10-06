@@ -7,4 +7,4 @@ target_include_directories(boards PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/nucleo_h7s3l8
 )
 
-target_link_libraries(boards PUBLIC drivers)
+target_link_libraries(boards PUBLIC drivers chip arch)

@@ -1,26 +1,25 @@
-#include "include/kernel.h"
+#include "kernel.h"
 #include "config.h"
 
+#include "arch.h"
 #include "hal.h"
+#include "hal_clock.h"
 
-struct tcb               tcbs[NUM_THREADS + 1];
-static uint8_t           thread_count = 0;
-static volatile uint32_t tick_count   = 0;
+struct tcb     tcbs[NUM_THREADS + 1];
+static uint8_t thread_count = 0;
 
 uint8_t kernel_first_switch = 1;
 
 static uint32_t idle_stack[IDLE_STACK_WORDS];
 
+/* Read by arch's PendSV_Handler, which relies on stack_ptr being at offset 0
+ * and next at offset 4 of struct tcb. Keep that in step with the contract
+ * documented in arch/arm/cortex_m/cortex_m.c. */
 struct tcb *current_tcb;
-
-__attribute__((weak)) void board_clock_init(void) {}
-__attribute__((weak)) void board_hal_init(void) {}
 
 static void task_exit_trap(void)
 {
-    __disable_irq();
-    while (1) {
-    }
+    arch_halt();
 }
 
 static void idle_task(void)
@@ -30,12 +29,10 @@ static void idle_task(void)
         for (uint8_t i = 0; i < thread_count; i++) {
             if (tcbs[i].stack_base[0] != STACK_FILL_PATTERN) {
                 // Stack overflow — hang visibly
-                __disable_irq();
-                while (1) {
-                }
+                arch_halt();
             }
         }
-        __WFI(); // sleep until next tick or IRQ
+        arch_idle(); // sleep until next tick or IRQ
     }
 }
 
@@ -84,7 +81,7 @@ uint8_t kernel_add_thread(void (*task)(void), uint32_t *stack, uint32_t stack_wo
     if (thread_count >= NUM_THREADS)
         return 0;
 
-    __disable_irq();
+    arch_irq_disable();
 
     struct tcb *tcb = &tcbs[thread_count];
     tcb->name       = name;
@@ -92,23 +89,26 @@ uint8_t kernel_add_thread(void (*task)(void), uint32_t *stack, uint32_t stack_wo
     kernel_stack_init(tcb, stack, stack_words, task);
     thread_count++;
 
-    __enable_irq();
+    arch_irq_enable();
     return 1;
 }
 
 void kernel_init(void)
 {
-    board_clock_init();
-    board_hal_init();
-
-    // critical for RTOS functionality
-    NVIC_SetPriority(SysTick_IRQn, TICK_PRIORITY - 1);
-    NVIC_SetPriority(PendSV_IRQn, TICK_PRIORITY);
+    /* The board is already up — main() calls board_init() first — so the
+     * clock tree is settled and clock_get_sysclk() reports the real core
+     * frequency that the tick reload has to be derived from.
+     *
+     * SysTick sits one level above PendSV, so a tick can pre-empt a switch
+     * but a switch can never delay a tick. */
+    arch_systick_start(clock_get_sysclk(), TICK_RATE_HZ, TICK_PRIORITY - 1);
+    arch_sched_prio_set(TICK_PRIORITY);
 }
 
 void kernel_launch(void)
 {
-    kernel_init();
+    /* kernel_init() is the caller's job — main() runs it before adding
+     * threads. Calling it again here re-ran board/clock/SysTick setup. */
 
     // Add idle task as the last entry — always has a task to run
     struct tcb *idle = &tcbs[thread_count];
@@ -122,37 +122,18 @@ void kernel_launch(void)
     idle->next  = &tcbs[0]; // idle wraps back to first task
     current_tcb = &tcbs[0]; // start with first task
 
-    // Switch Thread mode to PSP before pending PendSV
-    // Without this every task runs on MSP — no kernel/task stack separation
-    __set_PSP(__get_MSP());                 // safe placeholder value
-    __set_CONTROL(__get_CONTROL() | 0x02u); // SPSEL bit: MSP→PSP
-    __ISB();                                // flush pipeline after CONTROL write
+    // Hand Thread mode its own stack and request the first switch
+    arch_sched_start();
 
-    SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk;
-    __DSB(); // ensure write completes before irq enable
-
-    __enable_irq();
+    arch_irq_enable();
     while (1) {
     }
 }
 
-void kernel_tick(void)
-{
-    tick_count++;
-    // Trigger round-robin context switch every tick
-    SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk;
-}
-
-void kernel_delay_ms(uint32_t ms)
-{
-    uint32_t start = tick_count;
-    while ((tick_count - start) < ms) {
-        kernel_yield();
-    }
-}
+/* kernel_tick() and the tick-based delays live in time.c, which owns the
+ * counter. */
 
 void kernel_yield(void)
 {
-    SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk;
-    __DSB();
+    arch_sched_trigger();
 }

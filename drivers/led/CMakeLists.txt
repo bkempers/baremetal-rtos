@@ -5,6 +5,7 @@ add_library(led STATIC
  
 target_include_directories(led PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/drivers
 )
 
 target_link_libraries(led PUBLIC

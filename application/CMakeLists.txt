@@ -44,6 +44,10 @@ target_link_options(${PROJECT_NAME}.elf PRIVATE
     -Wl,-u,_printf_float
     -Wl,-u,_scanf_float
     -Wl,--print-memory-usage
+    # .init_array/.fini_array are write-flagged by the toolchain and ld merges
+    # them into the same PT_LOAD as .text, making it RWX. The flag is cosmetic
+    # here: the segment lives in flash, which is read-only regardless.
+    -Wl,--no-warn-rwx-segments
 )
 
 # Generate hex and bin files

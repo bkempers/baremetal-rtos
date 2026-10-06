@@ -1,9 +1,9 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include <arch.h>
 #include <board.h>
 #include <led.h>
-#include <system.h>
 
 #include <kernel.h>
 
@@ -15,11 +15,11 @@ KERNEL_STACK_DEFINE(led_stack, 128);
 static void led_task(void)
 {
     while (1) {
-        led_toggle(1);
+        led_toggle(BOARD_LED_GREEN);
         kernel_delay_ms(50);
-        led_toggle(2);
+        led_toggle(BOARD_LED_YELLOW);
         kernel_delay_ms(50);
-        led_toggle(3);
+        led_toggle(BOARD_LED_RED);
         kernel_delay_ms(50);
     }
 }
@@ -40,19 +40,15 @@ static void led_task(void)
 
 int main(void)
 {
-    HAL_Init();
-    SystemClock_Config();
+    if (board_init() != 0) {
+        arch_halt();
+    }
 
-    led_init();
-    led_reset();
+    kernel_init();
 
-    // Replace Scheduler_AddTask with kernel_add_thread
     kernel_add_thread(led_task, led_stack, 128, "led_task_1");
     // kernel_add_thread(console_task, console_stack, 256);
     // kernel_add_thread(bme680_task,  bme680_stack,  256);
 
-    // Replaces Task_Scheduler_Init() — does not return
     kernel_launch();
-
-    return 1;
 }
