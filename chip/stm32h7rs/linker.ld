@@ -4,29 +4,50 @@
 ENTRY(Reset_Handler)
 
 /* Highest address of the user mode stack */
-_estack = ORIGIN(RAM) + LENGTH(RAM);    /* end of RAM */
+_estack = ORIGIN(DTCM) + LENGTH(DTCM); /* end of "DTCM" Ram type memory */
+
 _Min_Heap_Size = 0x200;      /* required amount of heap  */
 _Min_Stack_Size = 0x400;     /* required amount of stack */
 
+__FLASH_BEGIN  = 0x08000000;
+__FLASH_SIZE   = 0x00010000;
+
+__RAM_BEGIN    = 0x24000000;
+__RAM_SIZE     = 0x71C00;
+__RAM_NONCACHEABLEBUFFER_SIZE = 0x400;
+
+/*TODO: switch to this after boot+app external flash can be used */
 /* __FLASH_BEGIN  = 0x70000000;  /* External OctoSPI flash */
 /* __FLASH_SIZE   = 0x02000000;  /* 32MB (256MBit) */
 
 /* Memory definitions */
 MEMORY
 {
-    FLASH (rx)  : ORIGIN = 0x08000000, LENGTH = 2048K
-    /* FLASH     (rx)  : ORIGIN = __FLASH_BEGIN, LENGTH = __FLASH_SIZE */
-    RAM (rwx)   : ORIGIN = 0x24000000, LENGTH = 640K
+    RAM       (xrw) : ORIGIN = __RAM_BEGIN,    LENGTH = __RAM_SIZE
+    RAM_NONCACHEABLEBUFFER (xrw) : ORIGIN = __RAM_BEGIN + __RAM_SIZE,  LENGTH = __RAM_NONCACHEABLEBUFFER_SIZE
+
+    ITCM      (xrw) : ORIGIN = 0x00000000,    LENGTH = 0x00010000
+    DTCM       (rw) : ORIGIN = 0x20000000,    LENGTH = 0x00010000
+    SRAMAHB   (rw)  : ORIGIN = 0x30000000,  LENGTH = 0x00008000
+    BKPSRAM   (rw)  : ORIGIN = 0x38800000,  LENGTH = 0x00001000
+
+    FLASH     (xrw) : ORIGIN = __FLASH_BEGIN, LENGTH = __FLASH_SIZE
 }
 
 /* Sections */
 SECTIONS
 {
+      /* The startup code into "FLASH" Rom type memory */
+    .isr_vector :
+    {
+        . = ALIGN(4);
+        KEEP(*(.isr_vector)) /* Startup code */
+        . = ALIGN(4);
+    } >FLASH
+
     /* The program code and other data goes into FLASH */
     .text :
     {
-        . = ALIGN(4);
-        KEEP(*(.isr_vector))        /* Startup code (vector table) */
         . = ALIGN(4);
         *(.text)                    /* .text sections (code) */
         *(.text*)                   /* .text* sections (code) */
@@ -85,12 +106,6 @@ SECTIONS
         PROVIDE_HIDDEN (__fini_array_end = .);
     } > FLASH
 
-    .shell_commands : {
-        PROVIDE(__start_shell_commands = .);
-        KEEP(*(.shell_commands))
-        PROVIDE(__stop_shell_commands = .);
-    } > FLASH
-
     /* Used by the startup to initialize data */
     _sidata = LOADADDR(.data);
 
@@ -134,15 +149,10 @@ SECTIONS
         . = . + _Min_Heap_Size;
         . = . + _Min_Stack_Size;
         . = ALIGN(8);
-    } > RAM
+    } > DTCM
 
     /* Define heap end (grows toward stack) */
     _heap_end = ORIGIN(RAM) + LENGTH(RAM) - _Min_Stack_Size;
-
-    /* NOTE: a /DISCARD/ of libc.a/libm.a/libgcc.a used to live here. It threw
-     * away every libc and libgcc section, which breaks memcpy/printf and
-     * contradicts the -Wl,-u,_printf_float on the link line. --gc-sections
-     * already drops what is genuinely unused. */
 
     .ARM.attributes 0 : { *(.ARM.attributes) }
 }
