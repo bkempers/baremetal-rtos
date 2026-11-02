@@ -1,4 +1,4 @@
-#include "time.h"
+#include "kernel_time.h"
 
 #include "arch.h"
 #include "kernel.h"

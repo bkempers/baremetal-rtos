@@ -3,8 +3,8 @@
 
 #include <stdint.h>
 
-#include "config.h"
-#include "time.h" /* kernel_tick / kernel_get_tick / kernel_delay_ms */
+#include "kernel_config.h"
+#include "kernel_time.h"
 
 #define KERNEL_STACK_DEFINE(name, words) static uint32_t name[(words)] __attribute__((aligned(8)))
 

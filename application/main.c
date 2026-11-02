@@ -4,10 +4,8 @@
 #include <arch.h>
 #include <board.h>
 #include <led.h>
-
 #include <kernel.h>
 
-// Each task gets its own stack
 KERNEL_STACK_DEFINE(led_stack, 128);
 // KERNEL_STACK_DEFINE(console_stack, 256);
 // KERNEL_STACK_DEFINE(bme680_stack,  256);
@@ -16,11 +14,11 @@ static void led_task(void)
 {
     while (1) {
         led_toggle(BOARD_LED_GREEN);
-        kernel_delay_ms(50);
+        kernel_delay_ms(500);
         led_toggle(BOARD_LED_YELLOW);
-        kernel_delay_ms(50);
+        kernel_delay_ms(500);
         led_toggle(BOARD_LED_RED);
-        kernel_delay_ms(50);
+        kernel_delay_ms(500);
     }
 }
 

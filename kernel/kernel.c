@@ -1,5 +1,5 @@
 #include "kernel.h"
-#include "config.h"
+#include "kernel_config.h"
 
 #include "arch.h"
 #include "hal.h"
@@ -62,14 +62,14 @@ void kernel_stack_init(struct tcb *tcb, uint32_t *stack, uint32_t stack_words, v
 
     // Software frame — debug sentinel values
     frame->exc_return = 0xFFFFFFFDu; // basic frame — no FPU on first switch
-    frame->r11        = 0xAAAAAAAA;
-    frame->r10        = 0xAAAAAAAA;
-    frame->r9         = 0xAAAAAAAA;
-    frame->r8         = 0xAAAAAAAA;
-    frame->r7         = 0xAAAAAAAA;
-    frame->r6         = 0xAAAAAAAA;
-    frame->r5         = 0xAAAAAAAA;
-    frame->r4         = 0xAAAAAAAA;
+    frame->r11        = STACK_FILL_PATTERN;
+    frame->r10        = STACK_FILL_PATTERN;
+    frame->r9         = STACK_FILL_PATTERN;
+    frame->r8         = STACK_FILL_PATTERN;
+    frame->r7         = STACK_FILL_PATTERN;
+    frame->r6         = STACK_FILL_PATTERN;
+    frame->r5         = STACK_FILL_PATTERN;
+    frame->r4         = STACK_FILL_PATTERN;
 
     // SP points at the bottom of the frame (r4, lowest address)
     tcb->stack_ptr  = (uint32_t *) frame;
@@ -95,21 +95,12 @@ uint8_t kernel_add_thread(void (*task)(void), uint32_t *stack, uint32_t stack_wo
 
 void kernel_init(void)
 {
-    /* The board is already up — main() calls board_init() first — so the
-     * clock tree is settled and clock_get_sysclk() reports the real core
-     * frequency that the tick reload has to be derived from.
-     *
-     * SysTick sits one level above PendSV, so a tick can pre-empt a switch
-     * but a switch can never delay a tick. */
     arch_systick_start(clock_get_sysclk(), TICK_RATE_HZ, TICK_PRIORITY - 1);
     arch_sched_prio_set(TICK_PRIORITY);
 }
 
 void kernel_launch(void)
 {
-    /* kernel_init() is the caller's job — main() runs it before adding
-     * threads. Calling it again here re-ran board/clock/SysTick setup. */
-
     // Add idle task as the last entry — always has a task to run
     struct tcb *idle = &tcbs[thread_count];
     idle->name       = "idle";
@@ -129,9 +120,6 @@ void kernel_launch(void)
     while (1) {
     }
 }
-
-/* kernel_tick() and the tick-based delays live in time.c, which owns the
- * counter. */
 
 void kernel_yield(void)
 {
