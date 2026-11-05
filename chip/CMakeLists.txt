@@ -11,10 +11,7 @@ add_library(chip STATIC
 
 target_include_directories(chip PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/stm32h7rs
-    ${CMAKE_SOURCE_DIR}/core/CMSIS/Device/ST/STM32H7RSxx/Include
-    ${CMAKE_SOURCE_DIR}/core/CMSIS/Core/Include
 )
 
-target_compile_definitions(chip PUBLIC STM32H7S3xx USE_FULL_ASSERT)
-
-target_link_libraries(chip PUBLIC drivers)
+# USE_FULL_LL_DRIVER/USE_FULL_ASSERT and the CMSIS headers come via stm32_ll
+target_link_libraries(chip PUBLIC drivers stm32_ll)

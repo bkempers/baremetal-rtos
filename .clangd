@@ -1,5 +1,5 @@
 CompileFlags:
-  CompilationDatabase: .build/ test/
+  CompilationDatabase: .
 Index:
   Background: Build
 Diagnostics:
@@ -8,5 +8,9 @@ Diagnostics:
 Completion:
   AllScopes: Yes
 
+---
+# Host-built unit tests use their own database, not the firmware cross build.
 If:
   PathMatch: test/unit/.*
+CompileFlags:
+  CompilationDatabase: test/
