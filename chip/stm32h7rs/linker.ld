@@ -14,7 +14,6 @@ __FLASH_SIZE   = 0x00010000;
 
 __RAM_BEGIN    = 0x24000000;
 __RAM_SIZE     = 0x71C00;
-__RAM_NONCACHEABLEBUFFER_SIZE = 0x400;
 
 /*TODO: switch to this after boot+app external flash can be used */
 /* __FLASH_BEGIN  = 0x70000000;  /* External OctoSPI flash */
@@ -24,8 +23,6 @@ __RAM_NONCACHEABLEBUFFER_SIZE = 0x400;
 MEMORY
 {
     RAM       (xrw) : ORIGIN = __RAM_BEGIN,    LENGTH = __RAM_SIZE
-    RAM_NONCACHEABLEBUFFER (xrw) : ORIGIN = __RAM_BEGIN + __RAM_SIZE,  LENGTH = __RAM_NONCACHEABLEBUFFER_SIZE
-
     ITCM      (xrw) : ORIGIN = 0x00000000,    LENGTH = 0x00010000
     DTCM       (rw) : ORIGIN = 0x20000000,    LENGTH = 0x00010000
     SRAMAHB   (rw)  : ORIGIN = 0x30000000,  LENGTH = 0x00008000

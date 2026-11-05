@@ -11,15 +11,10 @@ target_link_libraries(common INTERFACE
     git_version
 )
 
-#TODO: this needs to be dynamic based on pre-set board/chip
-# startup.c is built into libchip.a, so it is deliberately not listed here
-set(SYSTEM_SOURCES
-    ${CMAKE_SOURCE_DIR}/core/CMSIS/Device/ST/STM32H7RSxx/Source/Templates/system_stm32h7rsxx.c
-)
-
+# startup.c is built into libchip.a and system_stm32h7rsxx.c into libcmsis.a,
+# so neither is listed here
 add_executable(${PROJECT_NAME}.elf
     main.c
-    ${SYSTEM_SOURCES}
 )
 
 target_sources(${PROJECT_NAME}.elf PRIVATE
@@ -41,8 +36,8 @@ set(LINKER_SCRIPT ${CMAKE_SOURCE_DIR}/chip/stm32h7rs/linker.ld)
 target_link_options(${PROJECT_NAME}.elf PRIVATE
     -T${LINKER_SCRIPT}
     -Wl,-Map=${PROJECT_NAME}.map
-    -Wl,-u,_printf_float
-    -Wl,-u,_scanf_float
+    # TODO: readd when console comes into play maybe
+    # -Wl,-u,_printf_float
     -Wl,--print-memory-usage
     # .init_array/.fini_array are write-flagged by the toolchain and ld merges
     # them into the same PT_LOAD as .text, making it RWX. The flag is cosmetic
