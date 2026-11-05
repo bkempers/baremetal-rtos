@@ -11,3 +11,5 @@ target_include_directories(cmsis PUBLIC
 )
 
 target_compile_definitions(cmsis PUBLIC STM32H7S3xx)
+
+add_subdirectory(hal_stm32)

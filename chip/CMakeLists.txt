@@ -13,6 +13,5 @@ target_include_directories(chip PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/stm32h7rs
 )
 
-target_compile_definitions(chip PUBLIC USE_FULL_ASSERT)
-
-target_link_libraries(chip PUBLIC drivers cmsis)
+# USE_FULL_LL_DRIVER/USE_FULL_ASSERT and the CMSIS headers come via stm32_ll
+target_link_libraries(chip PUBLIC drivers stm32_ll)
