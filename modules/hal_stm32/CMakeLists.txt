@@ -1,6 +1,8 @@
 # ST LL drivers. Only *_ll_*.c is listed: the HAL sources share Inc/ with the
 # LL headers, so keeping them out of the build is what keeps us off the HAL.
 add_library(stm32_ll STATIC
+    stm32_assert.c
+
     stm32h7rs_hal_driver/Src/stm32h7rsxx_ll_utils.c
     stm32h7rs_hal_driver/Src/stm32h7rsxx_ll_rcc.c
     stm32h7rs_hal_driver/Src/stm32h7rsxx_ll_gpio.c
