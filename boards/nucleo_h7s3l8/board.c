@@ -40,28 +40,37 @@ static const led_obj board_leds[BOARD_LED_COUNT] = {
     },
 };
 
+/* HSI at 64MHz, undivided. The PLL is deliberately absent: its old settings
+ * (M=4 N=12 P=2) gave a 192MHz VCO, below this part's 400MHz minimum, and it
+ * was never selected as SYSCLK anyway. */
 static const struct clock_cfg board_clock_cfg = {
     .sysclk_source = RCC_SYSCLKSOURCE_HSI,
 
-    .hse_state   = RCC_HSE_OFF,
-    .hsi_state   = RCC_HSI_ON,
-    .calibration = 0,
-
-    .pll_state  = RCC_PLL_ON,
-    .pll_source = RCC_PLLSOURCE_HSI,
-    .pllm       = 4,
-    .plln       = 12,
-    .pllp       = 2,
-    .pllq       = 2,
-    .pllr       = 2,
-    .pll_frac   = 4096,
-
     .subsys = {
-        [RCC_CLKSOURCE_HCLK] = {.source = RCC_CLKSOURCE_HCLK, .divider = RCC_HCLK_DIV1},
-        [RCC_CLKSOURCE_APB1] = {.source = RCC_CLKSOURCE_APB1, .divider = RCC_APB1_DIV1},
-        [RCC_CLKSOURCE_APB2] = {.source = RCC_CLKSOURCE_APB2, .divider = RCC_APB2_DIV1},
-        [RCC_CLKSOURCE_APB4] = {.source = RCC_CLKSOURCE_APB4, .divider = RCC_APB4_DIV1},
-        [RCC_CLKSOURCE_APB5] = {.source = RCC_CLKSOURCE_APB5, .divider = RCC_APB5_DIV1},
+        [RCC_CLKSOURCE_SYS]  = {
+            .source = RCC_CLKSOURCE_SYS,  
+            .divider = LL_RCC_SYSCLK_DIV_1
+        },
+        [RCC_CLKSOURCE_HCLK] = {
+            .source = RCC_CLKSOURCE_HCLK, 
+            .divider = LL_RCC_AHB_DIV_1
+        },
+        [RCC_CLKSOURCE_APB1] = {
+            .source = RCC_CLKSOURCE_APB1, 
+            .divider = LL_RCC_APB1_DIV_1
+        },
+        [RCC_CLKSOURCE_APB2] = {
+            .source = RCC_CLKSOURCE_APB2, 
+            .divider = LL_RCC_APB2_DIV_1
+        },
+        [RCC_CLKSOURCE_APB4] = {
+            .source = RCC_CLKSOURCE_APB4, 
+            .divider = LL_RCC_APB4_DIV_1
+        },
+        [RCC_CLKSOURCE_APB5] = {
+            .source = RCC_CLKSOURCE_APB5, 
+            .divider = LL_RCC_APB5_DIV_1
+        },
     },
 };
 
