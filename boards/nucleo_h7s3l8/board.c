@@ -3,6 +3,8 @@
 #include "arch.h"
 #include "hal.h"
 #include "hal_clock.h"
+#include "hal_gpio.h"
+#include "hal_usart.h"
 #include "led.h"
 
 #include "stm32h7rs_clock.h"
@@ -74,9 +76,62 @@ static const struct clock_cfg board_clock_cfg = {
     },
 };
 
+static const usart_config board_console_cfg = {
+    .baudrate = 115200,
+    .wordlen = USART_WORDLEN_8,
+    .parity = USART_PARITY_NONE,
+    .stopbits = USART_STOPBITS_1,
+    .mode = USART_MODE_TX_RX,
+    .tx_pin = {
+        .gpio = {GPIO_PORT_D, GPIO_PIN_8},
+        .mode = GPIO_MODE_ALT_FUNC_PP,
+        .speed = GPIO_SPEED_FREQ_HIGH,
+        .pull = GPIO_NOPULL_UP,
+        .alternate = ((uint8_t) 0x07) // AF7
+    },
+    .rx_pin = {
+        .gpio = {GPIO_PORT_D, GPIO_PIN_9},
+        .mode = GPIO_MODE_ALT_FUNC_PP,
+        .speed = GPIO_SPEED_FREQ_HIGH,
+        .pull = GPIO_PULL_UP,
+        .alternate = ((uint8_t) 0x07) // AF7
+    }
+};
+
+//TODO: usart console setup
+    // /* Initialize TX & RX Ring buffers */
+    // ringbuffer_init(&tx_buffer);
+    // ringbuffer_init(&rx_buffer);
+    //
+    // /* Configure USART Handle */
+    // usart3.Instance            = USART3;
+    // usart3.Init.BaudRate       = 115200;
+    // usart3.Init.WordLen        = USART_WORDLENGTH_8B;
+    // usart3.Init.StopBits       = USART_STOPBITS_1;
+    // usart3.Init.Parity         = USART_PARITY_NONE;
+    // usart3.Init.Mode           = USART_MODE_TX_RX;
+    // usart3.Init.CLKPolarity    = USART_POLARITY_LOW;
+    // usart3.Init.CLKPhase       = USART_PHASE_1EDGE;
+    // usart3.Init.CLKLastBit     = USART_LASTBIT_DISABLE;
+    // usart3.Init.ClockPrescaler = USART_PRESCALER_DIV1;
+    // usart3.fifoMode            = 0;
+    // usart3.mask                = 0xFF;
+    // usart3.State               = HAL_USART_STATE_RESET;
+    //
+    // usart3.txCpltCallback   = HAL_USART_txCpltCallback;
+    // usart3.rxCpltCallback   = HAL_USART_rxCpltCallback;
+    // usart3.txrxCpltCallback = HAL_USART_txrxCpltCallback;
+    // usart3.errorCallback    = HAL_USART_errorCallback;
+
+
 void board_clock_init(void)
 {
     clock_init(&board_clock_cfg);
+}
+
+void board_console_init(void)
+{
+    usart_init(&board_console_cfg);
 }
 
 int board_init(void)
@@ -84,6 +139,7 @@ int board_init(void)
     arch_init(); /* FPU on before any float runs */
 
     board_clock_init();
+    board_console_init();
 
     if (led_init(board_leds, BOARD_LED_COUNT) != 0) {
         return -1;

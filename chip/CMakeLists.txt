@@ -6,6 +6,7 @@ add_library(chip STATIC
     stm32h7rs/clock.c
     # stm32h7rs/tim.c
     stm32h7rs/gpio.c
+    # stm32h7rs/usart.c
     #i2c/spi/usart/...
 )
 
