@@ -77,6 +77,7 @@ static const struct clock_cfg board_clock_cfg = {
 };
 
 static const usart_config board_console_cfg = {
+    .id = USART_3,
     .baudrate = 115200,
     .wordlen = USART_WORDLEN_8,
     .parity = USART_PARITY_NONE,
@@ -98,32 +99,6 @@ static const usart_config board_console_cfg = {
     }
 };
 
-//TODO: usart console setup
-    // /* Initialize TX & RX Ring buffers */
-    // ringbuffer_init(&tx_buffer);
-    // ringbuffer_init(&rx_buffer);
-    //
-    // /* Configure USART Handle */
-    // usart3.Instance            = USART3;
-    // usart3.Init.BaudRate       = 115200;
-    // usart3.Init.WordLen        = USART_WORDLENGTH_8B;
-    // usart3.Init.StopBits       = USART_STOPBITS_1;
-    // usart3.Init.Parity         = USART_PARITY_NONE;
-    // usart3.Init.Mode           = USART_MODE_TX_RX;
-    // usart3.Init.CLKPolarity    = USART_POLARITY_LOW;
-    // usart3.Init.CLKPhase       = USART_PHASE_1EDGE;
-    // usart3.Init.CLKLastBit     = USART_LASTBIT_DISABLE;
-    // usart3.Init.ClockPrescaler = USART_PRESCALER_DIV1;
-    // usart3.fifoMode            = 0;
-    // usart3.mask                = 0xFF;
-    // usart3.State               = HAL_USART_STATE_RESET;
-    //
-    // usart3.txCpltCallback   = HAL_USART_txCpltCallback;
-    // usart3.rxCpltCallback   = HAL_USART_rxCpltCallback;
-    // usart3.txrxCpltCallback = HAL_USART_txrxCpltCallback;
-    // usart3.errorCallback    = HAL_USART_errorCallback;
-
-
 void board_clock_init(void)
 {
     clock_init(&board_clock_cfg);
@@ -139,7 +114,7 @@ int board_init(void)
     arch_init(); /* FPU on before any float runs */
 
     board_clock_init();
-    board_console_init();
+    // board_console_init(); — awaiting chip/stm32h7rs/usart.c
 
     if (led_init(board_leds, BOARD_LED_COUNT) != 0) {
         return -1;

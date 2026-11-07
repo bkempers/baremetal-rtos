@@ -6,6 +6,7 @@ add_library(stm32_ll STATIC
     stm32h7rs_hal_driver/Src/stm32h7rsxx_ll_utils.c
     stm32h7rs_hal_driver/Src/stm32h7rsxx_ll_rcc.c
     stm32h7rs_hal_driver/Src/stm32h7rsxx_ll_gpio.c
+    stm32h7rs_hal_driver/Src/stm32h7rsxx_ll_usart.c
 )
 
 target_include_directories(stm32_ll PUBLIC

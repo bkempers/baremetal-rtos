@@ -1,6 +1,6 @@
 add_library(drivers STATIC
     led/led.c
-    console/console.c
+    # console/console.c — awaiting the hal_usart rewrite + new ringbuffer
 )
 
 #TODO: want to probably make this dynamic and configurable per 'app'
