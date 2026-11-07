@@ -1,4 +1,9 @@
-[submodule "Application/external/lvgl"]
-	path = Application/external/lvgl
-    url = https://github.com/lvgl/lvgl.git
-    branch = release/v9.4
+[submodule "modules/hal_stm32/stm32h7rs_hal_driver"]
+	path = modules/hal_stm32/stm32h7rs_hal_driver
+	url = https://github.com/STMicroelectronics/stm32h7rsxx-hal-driver
+[submodule "modules/hal_stm32/cmsis-device-h7rs"]
+	path = modules/hal_stm32/cmsis-device-h7rs
+	url = https://github.com/STMicroelectronics/cmsis-device-h7rs
+[submodule "modules/cmsis_core"]
+	path = modules/cmsis_core
+	url = https://github.com/STMicroelectronics/cmsis-core

@@ -3,6 +3,8 @@
 #include "arch.h"
 #include "hal.h"
 #include "hal_clock.h"
+#include "hal_gpio.h"
+#include "hal_usart.h"
 #include "led.h"
 
 #include "stm32h7rs_clock.h"
@@ -40,29 +42,61 @@ static const led_obj board_leds[BOARD_LED_COUNT] = {
     },
 };
 
+/* HSI at 64MHz, undivided. The PLL is deliberately absent: its old settings
+ * (M=4 N=12 P=2) gave a 192MHz VCO, below this part's 400MHz minimum, and it
+ * was never selected as SYSCLK anyway. */
 static const struct clock_cfg board_clock_cfg = {
     .sysclk_source = RCC_SYSCLKSOURCE_HSI,
 
-    .hse_state   = RCC_HSE_OFF,
-    .hsi_state   = RCC_HSI_ON,
-    .calibration = 0,
-
-    .pll_state  = RCC_PLL_ON,
-    .pll_source = RCC_PLLSOURCE_HSI,
-    .pllm       = 4,
-    .plln       = 12,
-    .pllp       = 2,
-    .pllq       = 2,
-    .pllr       = 2,
-    .pll_frac   = 4096,
-
     .subsys = {
-        [RCC_CLKSOURCE_HCLK] = {.source = RCC_CLKSOURCE_HCLK, .divider = RCC_HCLK_DIV1},
-        [RCC_CLKSOURCE_APB1] = {.source = RCC_CLKSOURCE_APB1, .divider = RCC_APB1_DIV1},
-        [RCC_CLKSOURCE_APB2] = {.source = RCC_CLKSOURCE_APB2, .divider = RCC_APB2_DIV1},
-        [RCC_CLKSOURCE_APB4] = {.source = RCC_CLKSOURCE_APB4, .divider = RCC_APB4_DIV1},
-        [RCC_CLKSOURCE_APB5] = {.source = RCC_CLKSOURCE_APB5, .divider = RCC_APB5_DIV1},
+        [RCC_CLKSOURCE_SYS]  = {
+            .source = RCC_CLKSOURCE_SYS,  
+            .divider = LL_RCC_SYSCLK_DIV_1
+        },
+        [RCC_CLKSOURCE_HCLK] = {
+            .source = RCC_CLKSOURCE_HCLK, 
+            .divider = LL_RCC_AHB_DIV_1
+        },
+        [RCC_CLKSOURCE_APB1] = {
+            .source = RCC_CLKSOURCE_APB1, 
+            .divider = LL_RCC_APB1_DIV_1
+        },
+        [RCC_CLKSOURCE_APB2] = {
+            .source = RCC_CLKSOURCE_APB2, 
+            .divider = LL_RCC_APB2_DIV_1
+        },
+        [RCC_CLKSOURCE_APB4] = {
+            .source = RCC_CLKSOURCE_APB4, 
+            .divider = LL_RCC_APB4_DIV_1
+        },
+        [RCC_CLKSOURCE_APB5] = {
+            .source = RCC_CLKSOURCE_APB5, 
+            .divider = LL_RCC_APB5_DIV_1
+        },
     },
+};
+
+static const usart_config board_console_cfg = {
+    .id = USART_3,
+    .baudrate = 115200,
+    .wordlen = USART_WORDLEN_8,
+    .parity = USART_PARITY_NONE,
+    .stopbits = USART_STOPBITS_1,
+    .mode = USART_MODE_TX_RX,
+    .tx_pin = {
+        .gpio = {GPIO_PORT_D, GPIO_PIN_8},
+        .mode = GPIO_MODE_ALT_FUNC_PP,
+        .speed = GPIO_SPEED_FREQ_HIGH,
+        .pull = GPIO_NOPULL_UP,
+        .alternate = ((uint8_t) 0x07) // AF7
+    },
+    .rx_pin = {
+        .gpio = {GPIO_PORT_D, GPIO_PIN_9},
+        .mode = GPIO_MODE_ALT_FUNC_PP,
+        .speed = GPIO_SPEED_FREQ_HIGH,
+        .pull = GPIO_PULL_UP,
+        .alternate = ((uint8_t) 0x07) // AF7
+    }
 };
 
 void board_clock_init(void)
@@ -70,11 +104,17 @@ void board_clock_init(void)
     clock_init(&board_clock_cfg);
 }
 
+void board_console_init(void)
+{
+    usart_init(&board_console_cfg);
+}
+
 int board_init(void)
 {
     arch_init(); /* FPU on before any float runs */
 
     board_clock_init();
+    // board_console_init(); — awaiting chip/stm32h7rs/usart.c
 
     if (led_init(board_leds, BOARD_LED_COUNT) != 0) {
         return -1;

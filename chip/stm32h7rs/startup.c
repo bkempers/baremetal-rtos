@@ -365,8 +365,16 @@ uint32_t g_pfnVectors[ISR_VECTOR_SIZE_WORDS] __attribute__((section(".isr_vector
 extern uint32_t _etext, _sdata, _edata, _sbss, _ebss, _sidata;
 int             main(void);
 
+/* ST's system_stm32h7rsxx.c. Declared here rather than including
+ * system_stm32h7rsxx.h so startup.c stays free of CMSIS headers. */
+void SystemInit(void);
+
 void Reset_Handler(void)
 {
+    /* Sets SCB->VTOR from &g_pfnVectors and enables the FPU. Touches no RAM,
+     * so it is safe ahead of the .data copy below. */
+    SystemInit();
+
     // Copy .data from FLASH to RAM
     uint32_t data_size  = (uint32_t) &_edata - (uint32_t) &_sdata;
     uint8_t *flash_data = (uint8_t *) &_sidata; // Source in FLASH

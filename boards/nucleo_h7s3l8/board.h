@@ -17,5 +17,6 @@ typedef enum {
 
 int board_init(void);
 void board_clock_init(void);
+void board_console_init(void);
 
 #endif

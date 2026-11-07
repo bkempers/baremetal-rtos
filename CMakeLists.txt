@@ -24,6 +24,7 @@ endif()
 string(TIMESTAMP BUILD_TIMESTAMP "%Y-%m-%d %H:%M:%S" UTC)
 
 # Subdirectories
+add_subdirectory(modules)
 add_subdirectory(lib)
 add_subdirectory(drivers)
 add_subdirectory(arch)
