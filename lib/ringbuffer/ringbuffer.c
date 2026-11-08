@@ -1,69 +1,82 @@
 #include <string.h>
-
 #include "ringbuffer.h"
 
-// static bool ringbuffer_is_free(ringbuffer *_this, const uint32_t size);
-//
-// static bool ringbuffer_is_free(ringbuffer *_this, const uint32_t size)
-// {
-//     if (_this->count + size <= RINGBUFF_SIZE) {
-//         return true;
-//     } else {
-//         return false;
-//     }
-// }
-
-void ringbuffer_init(ringbuffer *_this)
+int ringbuffer_init(ringbuffer *rb, uint8_t *data, size_t size)
 {
-    memset(_this, 0, sizeof(*_this));
-}
-
-bool ringbuffer_is_empty(ringbuffer *_this)
-{
-    return (0 == _this->count);
-}
-
-bool ringbuffer_is_full(ringbuffer *_this)
-{
-    return (_this->count == RINGBUFF_SIZE);
-}
-
-uint8_t ringbuffer_get(ringbuffer *_this)
-{
-    uint8_t item;
-    if (_this->count > 0) {
-        item        = _this->buf[_this->tail];
-        _this->tail = ((_this->tail + 1) % RINGBUFF_SIZE);
-        _this->count--;
-    } else {
-        item = 0xFF;
+    if (rb == NULL || data == NULL || size == 0) {
+        return -1;
     }
 
-    return item;
+    rb->buffer = data;
+    rb->head = 0;
+    rb->tail = 0;
+    rb->size = size;
+
+    return 0;
 }
 
-void ringbuffer_put(ringbuffer *_this, const uint8_t item)
+void ringbuffer_reset(ringbuffer *rb)
 {
-    if (_this->count < RINGBUFF_SIZE) {
-        _this->buf[_this->head] = item;
-        _this->head             = ((_this->head + 1) % RINGBUFF_SIZE);
-        _this->count++;
+    if (rb->buffer != NULL) {
+        memset(rb->buffer, 0, (size_t)ringbuffer_size(rb));
     }
+
+    rb->head = 0;
+    rb->tail = 0;
 }
 
-void ringbuffer_put_many(ringbuffer *_this, const uint8_t *items, const uint32_t size)
+bool ringbuffer_empty(ringbuffer *rb)
 {
-    for (uint32_t i = 0; i < size; i++) {
-        ringbuffer_put(_this, items[i]);
-    }
+    return (rb->head == rb->tail);
 }
 
-void ringbuffer_flush(ringbuffer *_this, const bool clear_buf)
+bool ringbuffer_full(ringbuffer *rb)
 {
-    _this->head  = 0;
-    _this->tail  = 0;
-    _this->count = 0;
-    if (clear_buf) {
-        memset(_this->buf, 0, sizeof(_this->buf));
+    uint32_t next_head = rb->head + 1;
+    if (next_head == rb->size) {
+        next_head = 0;
     }
+    return (next_head == rb->tail);
+}
+
+uint32_t ringbuffer_size(ringbuffer *rb)
+{
+    return rb->size;
+}
+
+bool ringbuffer_get(ringbuffer *rb, uint8_t *value)
+{
+    /* check if ringbuffer is empty */
+    if (ringbuffer_empty(rb)) {
+        return false;
+    }
+
+    *value = rb->buffer[rb->tail];
+    uint32_t next_tail = rb->tail + 1;
+
+    /* check for wrap around */
+    if (next_tail == ringbuffer_size(rb)) {
+        next_tail = 0;
+    }
+
+    rb->tail = next_tail;
+    return true;
+}
+
+bool ringbuffer_put(ringbuffer *rb, const uint8_t item)
+{
+    /* check for wrap around */
+    uint32_t new_head = rb->head + 1;
+    if (new_head == ringbuffer_size(rb)) {
+        new_head = 0;
+    }
+
+    /* check if ringbuffer is full */
+    if (new_head == rb->tail) {
+        return false;
+    }
+
+    rb->buffer[rb->head] = item;
+    rb->head = new_head;
+    return true;
 }

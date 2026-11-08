@@ -1,0 +1,6 @@
+Unity Test Framework
+https://github.com/ThrowTheSwitch/Unity
+v2.7.0 (b6763fbd9cedfacaa89e2ad9fd00d615a234e355)
+
+Vendored files: src/unity.c, src/unity.h, src/unity_internals.h, LICENSE.txt
+To update: re-copy those four files from the desired tag.
