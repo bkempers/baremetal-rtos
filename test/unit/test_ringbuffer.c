@@ -50,11 +50,56 @@ void test_ringbuffer_returns_correct_byte(void)
     rb_dump("after get");
 }
 
+void test_ringbuffer_wraparound(void)
+{
+    uint8_t out = 0;
+
+    TEST_ASSERT_TRUE(ringbuffer_empty(&rb));
+
+    // fill up ringbuffer
+    TEST_ASSERT_TRUE(ringbuffer_put(&rb, 0x01));
+    TEST_ASSERT_TRUE(ringbuffer_put(&rb, 0x02));
+    TEST_ASSERT_TRUE(ringbuffer_put(&rb, 0x03));
+    TEST_ASSERT_TRUE(ringbuffer_put(&rb, 0x04));
+    TEST_ASSERT_TRUE(ringbuffer_put(&rb, 0x05));
+    TEST_ASSERT_TRUE(ringbuffer_put(&rb, 0x06));
+    TEST_ASSERT_TRUE(ringbuffer_put(&rb, 0x07));
+
+    rb_dump("after writing");
+
+    // don't overwrite tail?
+    TEST_ASSERT_FALSE(ringbuffer_put(&rb, 0x08));
+    TEST_ASSERT_TRUE(ringbuffer_full(&rb));
+
+    // readout all data
+    TEST_ASSERT_TRUE(ringbuffer_get(&rb, &out));
+    TEST_ASSERT_EQUAL_HEX8(0x01, out);
+    TEST_ASSERT_TRUE(ringbuffer_get(&rb, &out));
+    TEST_ASSERT_EQUAL_HEX8(0x02, out);
+    TEST_ASSERT_TRUE(ringbuffer_get(&rb, &out));
+    TEST_ASSERT_EQUAL_HEX8(0x03, out);
+    TEST_ASSERT_TRUE(ringbuffer_get(&rb, &out));
+    TEST_ASSERT_EQUAL_HEX8(0x04, out);
+
+    rb_dump("midway reading");
+
+    TEST_ASSERT_TRUE(ringbuffer_get(&rb, &out));
+    TEST_ASSERT_EQUAL_HEX8(0x05, out);
+    TEST_ASSERT_TRUE(ringbuffer_get(&rb, &out));
+    TEST_ASSERT_EQUAL_HEX8(0x06, out);
+    TEST_ASSERT_TRUE(ringbuffer_get(&rb, &out));
+    TEST_ASSERT_EQUAL_HEX8(0x07, out);
+
+    TEST_ASSERT_TRUE(ringbuffer_empty(&rb));
+    TEST_ASSERT_FALSE(ringbuffer_get(&rb, &out));
+}
+
 int main(void)
 {
     UNITY_BEGIN();
 
     RUN_TEST(test_ringbuffer_returns_correct_byte);
+    RUN_TEST(test_ringbuffer_wraparound);
 
     return UNITY_END();
 }

@@ -46,6 +46,7 @@ $(TEST_DIR)/CMakeCache.txt:
 
 test: $(TEST_DIR)/CMakeCache.txt
 	cmake --build $(TEST_DIR) -j $(JOBS)
+	@ln -sf ../$(TEST_DIR)/compile_commands.json test/compile_commands.json
 	ctest --test-dir $(TEST_DIR) $(CTEST_FLAGS)
 
 test-verbose:
@@ -56,7 +57,7 @@ rebuild:
 	@$(MAKE) --no-print-directory build
 
 clean:
-	rm -rf build compile_commands.json
+	rm -rf build compile_commands.json test/compile_commands.json
 
 flash: build
 	cmake --build $(BUILD_DIR) --target flash

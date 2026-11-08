@@ -11,6 +11,6 @@ Completion:
 ---
 # Host-built unit tests use their own database, not the firmware cross build.
 If:
-  PathMatch: test/unit/.*
+  PathMatch: test/.*
 CompileFlags:
   CompilationDatabase: test/
