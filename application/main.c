@@ -16,11 +16,11 @@ static void led_task(void)
 {
     while (1) {
         led_toggle(BOARD_LED_GREEN);
-        kernel_delay_ms(50);
+        kernel_delay_ms(10);
         led_toggle(BOARD_LED_YELLOW);
-        kernel_delay_ms(50);
+        kernel_delay_ms(10);
         led_toggle(BOARD_LED_RED);
-        kernel_delay_ms(50);
+        kernel_delay_ms(10);
     }
 }
 

@@ -3,31 +3,24 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-
-#define RINGBUFF_SIZE 1024
+#include <stdlib.h>
 
 typedef struct {
-    uint8_t           buf[RINGBUFF_SIZE];
-    volatile uint32_t head;
-    volatile uint32_t tail;
-    volatile uint32_t count;
+    uint8_t *buffer;
+    uint32_t head;
+    uint32_t tail;
+    uint32_t count;
 } ringbuffer;
 
-void ringbuffer_init(ringbuffer *buf);
+int ringbuffer_init(ringbuffer *rb, size_t size);
+void ringbuffer_reset(ringbuffer *rb);
 
-bool ringbuffer_is_empty(ringbuffer *buf);
-bool ringbuffer_is_full(ringbuffer *buf);
+bool ringbuffer_empty(ringbuffer *rb);
+bool ringbuffer_full(ringbuffer *rb);
+uint32_t ringbuffer_size(ringbuffer *rb);
 
-// uint8_t
-uint8_t ringbuffer_get(ringbuffer *buf);
-void    ringbuffer_put(ringbuffer *buf, const uint8_t item);
-void    ringbuffer_put_many(ringbuffer *buf, const uint8_t *items, const uint32_t size);
-
-// // char
-// char ringbuffer_get(ringbuffer *buf);
-// void ringbuffer_put(ringbuffer *buf, const char item);
-// void ringbuffer_put_many(ringbuffer *buf, const char* items, const uint32_t size);
-
-void ringbuffer_flush(ringbuffer *buf, const bool clear_buf);
+//TODO make these get/put multiple
+bool ringbuffer_get(ringbuffer *rb, uint8_t *value);
+bool ringbuffer_put(ringbuffer *rb, const uint8_t item);
 
 #endif
