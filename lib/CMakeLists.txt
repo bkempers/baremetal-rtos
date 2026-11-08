@@ -1,3 +1,5 @@
+add_subdirectory(ringbuffer)
+
 set(GIT_VERSION_SRC ${CMAKE_CURRENT_BINARY_DIR}/git_version.c)
 
 # Add a custom command that produces git_version.c, plus

@@ -2,15 +2,17 @@
 
 BUILD_TYPE ?= Debug
 BUILD_DIR  := build/$(BUILD_TYPE)
+TEST_DIR   := build/test
 ELF        := $(BUILD_DIR)/application/baremetal_rtos.elf
 JOBS       ?= $(shell nproc 2>/dev/null || sysctl -n hw.ncpu)
+CTEST_FLAGS ?= --output-on-failure
 SRC_DIRS   := hal kernel application
 
 PORT       ?= $(firstword $(wildcard /dev/tty.usbmodem*))
 BAUD       ?= 115200
 STM32_PROG ?= /Applications/STMicroelectronics/STM32Cube/STM32CubeProgrammer/STM32CubeProgrammer.app/Contents/MacOs/bin/STM32_Programmer_CLI
 
-.PHONY: all help build release rebuild clean flash erase gdb size serial info format check
+.PHONY: all help build release rebuild clean flash erase gdb size serial info format check test test-verbose
 
 all: build
 
@@ -38,6 +40,16 @@ build: $(BUILD_DIR)/CMakeCache.txt
 
 release:
 	@$(MAKE) --no-print-directory BUILD_TYPE=Release build
+
+$(TEST_DIR)/CMakeCache.txt:
+	cmake -S test -B $(TEST_DIR) -DCMAKE_BUILD_TYPE=Debug
+
+test: $(TEST_DIR)/CMakeCache.txt
+	cmake --build $(TEST_DIR) -j $(JOBS)
+	ctest --test-dir $(TEST_DIR) $(CTEST_FLAGS)
+
+test-verbose:
+	@$(MAKE) --no-print-directory CTEST_FLAGS=-V test
 
 rebuild:
 	@$(MAKE) --no-print-directory clean

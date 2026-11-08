@@ -7,12 +7,12 @@
 
 typedef struct {
     uint8_t *buffer;
-    uint32_t head;
-    uint32_t tail;
-    uint32_t count;
+    volatile uint32_t head;
+    volatile uint32_t tail;
+    uint32_t size;
 } ringbuffer;
 
-int ringbuffer_init(ringbuffer *rb, size_t size);
+int ringbuffer_init(ringbuffer *rb, uint8_t *data, size_t size);
 void ringbuffer_reset(ringbuffer *rb);
 
 bool ringbuffer_empty(ringbuffer *rb);

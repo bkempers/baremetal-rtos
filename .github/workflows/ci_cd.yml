@@ -1,37 +1,54 @@
 name: CI_CD
 
+permissions:
+  contents: read
+
 on:
   push:
     branches: ["master"]
   pull_request:
     branches: ["**"]
 
+# A new push to a PR makes the in-flight run redundant.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
+    name: Unit tests (host)
     runs-on: ubuntu-latest
 
     steps:
+      # The host tests build lib/ sources with the native compiler and have no
+      # CMSIS/HAL dependency, so the submodules stay unfetched here.
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
       - name: Install dependencies
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y gcc make ruby gcovr
-          sudo gem install ceedling -v 1.0.1 --no-document
+          sudo apt-get install -y cmake gcc
+
+      # test/ is its own CMake project: the top-level CMakeLists.txt pins the
+      # arm-none-eabi toolchain, so tests cannot be configured from the root.
+      - name: Configure
+        run: cmake -S test -B build/test -DCMAKE_BUILD_TYPE=Debug
+
+      - name: Build
+        run: cmake --build build/test -j "$(nproc)"
 
       - name: Run tests
-        run: ./project.sh test
+        run: ctest --test-dir build/test --output-on-failure --output-junit junit.xml
 
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-results
-          path: .build/ceedling/artifacts/
+          path: build/test/junit.xml
 
   build:
+    name: Firmware (arm-none-eabi)
     runs-on: ubuntu-latest
 
     steps:
@@ -42,16 +59,17 @@ jobs:
       - name: Install ARM toolchain
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y cmake ninja-build gcc-arm-none-eabi binutils-arm-none-eabi
+          sudo apt-get install -y cmake gcc-arm-none-eabi binutils-arm-none-eabi
 
       - name: Build firmware
-        run: |
-          ./project.sh build
+        run: make release
 
       - name: Upload firmware
         uses: actions/upload-artifact@v4
         with:
           name: firmware
           path: |
-            .build/**/*.elf
-            .build/**/*.hex
+            build/Release/application/*.elf
+            build/Release/application/*.hex
+            build/Release/application/*.bin
+            build/Release/application/*.map

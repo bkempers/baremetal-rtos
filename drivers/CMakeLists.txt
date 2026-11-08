@@ -11,3 +11,6 @@ target_include_directories(drivers PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/led
     ${CMAKE_SOURCE_DIR}/lib          # compiler.h
 )
+
+# console.c keeps the rx/tx line buffers
+target_link_libraries(drivers PUBLIC ringbuffer)

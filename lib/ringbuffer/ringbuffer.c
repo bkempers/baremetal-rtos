@@ -1,18 +1,18 @@
 #include <string.h>
 #include "ringbuffer.h"
 
-int ringbuffer_init(ringbuffer *rb, size_t size)
+int ringbuffer_init(ringbuffer *rb, uint8_t *data, size_t size)
 {
-    rb->buffer = malloc(size);
-    if (rb->buffer != NULL) {
-        memset(rb->buffer, 0, size);
+    if (rb == NULL || data == NULL || size == 0) {
+        return -1;
     }
 
+    rb->buffer = data;
     rb->head = 0;
     rb->tail = 0;
-    rb->count = 0;
+    rb->size = size;
 
-    return 1;
+    return 0;
 }
 
 void ringbuffer_reset(ringbuffer *rb)
@@ -23,32 +23,35 @@ void ringbuffer_reset(ringbuffer *rb)
 
     rb->head = 0;
     rb->tail = 0;
-    rb->count = 0;
 }
 
 bool ringbuffer_empty(ringbuffer *rb)
 {
-    return (rb->count == 0);
+    return (rb->head == rb->tail);
 }
 
 bool ringbuffer_full(ringbuffer *rb)
 {
-    return ((size_t)rb->count == ringbuffer_size(rb));
+    uint32_t next_head = rb->head + 1;
+    if (next_head == rb->size) {
+        next_head = 0;
+    }
+    return (next_head == rb->tail);
 }
 
 uint32_t ringbuffer_size(ringbuffer *rb)
 {
-    return (sizeof(rb->buffer)/sizeof(rb->buffer[0]));
+    return rb->size;
 }
 
 bool ringbuffer_get(ringbuffer *rb, uint8_t *value)
 {
     /* check if ringbuffer is empty */
-    if (rb->head == rb->tail || rb->count == 0) {
+    if (ringbuffer_empty(rb)) {
         return false;
     }
 
-    value = &rb->buffer[rb->tail];
+    *value = rb->buffer[rb->tail];
     uint32_t next_tail = rb->tail + 1;
 
     /* check for wrap around */
@@ -57,7 +60,6 @@ bool ringbuffer_get(ringbuffer *rb, uint8_t *value)
     }
 
     rb->tail = next_tail;
-    rb->count--;
     return true;
 }
 
@@ -76,6 +78,5 @@ bool ringbuffer_put(ringbuffer *rb, const uint8_t item)
 
     rb->buffer[rb->head] = item;
     rb->head = new_head;
-    rb->count++;
     return true;
 }
