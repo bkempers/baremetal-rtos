@@ -7,4 +7,5 @@ target_include_directories(arch PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/arm/cortex_m
 )
 
-target_link_libraries(arch PRIVATE chip)
+# cmsis, not chip: arch must not depend on a specific SoC.
+target_link_libraries(arch PRIVATE cmsis)

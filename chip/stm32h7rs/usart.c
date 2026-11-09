@@ -1,5 +1,5 @@
 #include "hal_usart.h"
-// #include "ringbuffer.h"
+#include "ringbuffer.h"
 
 #include "stm32_assert.h"
 #include "stm32h7rsxx_ll_bus.h"
@@ -8,6 +8,11 @@
 
 #define USART_IRQ_PRIO 5u
 #define USART_TX_RX_TIMEOUT 1000U
+#define USART_BUF_SIZE 256u
+
+/* Per instance; indexed by usart_id, so the USART_NONE row is unused. */
+static uint8_t tx_storage[USART_COUNT][USART_BUF_SIZE];
+static uint8_t rx_storage[USART_COUNT][USART_BUF_SIZE];
 
 typedef enum { USART_BUS_APB1, USART_BUS_APB2 } usart_bus;
 
@@ -81,8 +86,8 @@ int usart_init(const usart_config *usart)
 
     const typeof(usart_hw[0]) *hw = &usart_hw[usart->id];
 
-    ringbuffer_init(&usart_state[usart->id].tx);
-    ringbuffer_init(&usart_state[usart->id].rx);
+    ringbuffer_init(&usart_state[usart->id].tx, tx_storage[usart->id], USART_BUF_SIZE);
+    ringbuffer_init(&usart_state[usart->id].rx, rx_storage[usart->id], USART_BUF_SIZE);
 
     hal_gpio_init(&usart->tx_pin);
     hal_gpio_init(&usart->rx_pin);
@@ -133,11 +138,9 @@ size_t usart_write(usart_id id, const uint8_t *data, size_t len)
 {
     size_t n = 0;
 
-    arch_irq_disable();
-    while (n < len && !ringbuffer_is_full(&usart_state[id].tx)) {
+    while (n < len && !ringbuffer_full(&usart_state[id].tx)) {
         ringbuffer_put(&usart_state[id].tx, data[n++]);
     }
-    arch_irq_enable();
 
     if (n > 0) {
         LL_USART_EnableIT_TXE_TXFNF(usart_hw[id].base);
@@ -150,11 +153,11 @@ size_t usart_read(usart_id id, uint8_t *data, size_t len)
 {
     size_t n = 0;
 
-    arch_irq_disable();
-    while (n < len && !ringbuffer_is_empty(&usart_state[id].rx)) {
-        data[n++] = ringbuffer_get(&usart_state[id].rx);
+    while (n < len && !ringbuffer_empty(&usart_state[id].rx)) {
+        uint8_t data_out = 0;
+        ringbuffer_get(&usart_state[id].rx, &data_out);
+        data[n++] = data_out;
     }
-    arch_irq_enable();
 
     return n;
 }
@@ -185,13 +188,22 @@ static void usart_isr(usart_id id)
 
     if (LL_USART_IsActiveFlag_RXNE_RXFNE(base)) {
         uint8_t b = LL_USART_ReceiveData8(base); /* the read clears RXNE */
-        if (!ringbuffer_is_full(&usart_state[id].rx)) {
+        if (!ringbuffer_full(&usart_state[id].rx)) {
             ringbuffer_put(&usart_state[id].rx, b);
         } else {
             err->overrun++; /* software overrun, distinct from ORE */
         }
     }
     if (LL_USART_IsEnabledIT_TXE_TXFNF(base) && LL_USART_IsActiveFlag_TXE_TXFNF(base)) {
+        uint8_t b = 0;
+        if (ringbuffer_get(&usart_state[id].tx, &b)) {
+            LL_USART_TransmitData8(base, b); /* the write clears TXE */
+        } else {
+            /* TXE stays asserted while the holding register is free, so the
+             * interrupt has to be masked or it re-enters forever. */
+            LL_USART_DisableIT_TXE_TXFNF(base);
+        }
+    }
 }
 
 /* Matches startup.c's naming. Phase 5's *_IRHandler -> *_IRQHandler rename has to update this too. */

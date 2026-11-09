@@ -20,6 +20,6 @@
 int console_init(const usart_config *usart);
 void console_process(void);
 int console_write(const char *data, int len);
-// void console_command(char *command);
+void console_command(char *command);
 
 #endif // CONSOLE_H

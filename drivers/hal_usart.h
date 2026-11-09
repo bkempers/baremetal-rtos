@@ -51,8 +51,6 @@ typedef struct {
     gpio_init rx_pin;
 } usart_config;
 
-//TODO: maybe look at adding multiple usart_id classifier
-
 int usart_init(const usart_config *usart);
 void usart_deinit(usart_id id);
 
