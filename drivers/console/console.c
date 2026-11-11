@@ -4,13 +4,11 @@
 
 #include "console.h"
 #include "git_version.h"
-#include "led.h"
-#include "ringbuffer.h"
-#include "stm32h7rs_hal.h"
-#include "stm32h7rs_hal_usart.h"
-#include "system.h"
 
 #define MAX_ARGS 16
+
+// which port console_write/console_process talk to, set by console_init
+static usart_id console_usart = USART_NONE;
 
 // global variables
 static char cmd_buffer[CMD_BUFFER_SIZE];
@@ -27,7 +25,7 @@ static volatile uint16_t trace_index = 0;
 
 static void print_setup_information();
 static int  parse_args(char *line, char *argv[], int max_args);
-static void process_rx_buffer();
+static void process_rx_buffer(void);
 
 int console_init(const usart_config *usart)
 {
@@ -35,24 +33,32 @@ int console_init(const usart_config *usart)
         return -1;
     }
 
+    console_usart = usart->id;
+    cmd_index     = 0;
+    cmd_ready     = false;
+
     print_setup_information();
     return 0;
 }
 
 void console_process(void)
 {
-    // process_rx_buffer();
+    if (console_usart == USART_NONE) {
+        return;
+    }
+
+    process_rx_buffer();
 
     // Check for complete command
-    // if (cmd_ready) {
-    //     Console_Command(cmd_buffer);
-    //
-    //     // Reset for next command
-    //     cmd_index = 0;
-    //     cmd_ready = false;
-    //
-    //     Console_Write("sh> ", 4);
-    // }
+    if (cmd_ready) {
+        console_command(cmd_buffer);
+
+        // Reset for next command
+        cmd_index = 0;
+        cmd_ready = false;
+
+        console_write("sh> ", 4);
+    }
 
     // USART Error Handler Check
     for (int i = 0; i < TRACE_SIZE; i++) {
@@ -66,9 +72,37 @@ void console_process(void)
     trace_index = 0;
 }
 
+/* Negative distinguishes "port not up" from "tx ringbuffer full" for _write. */
 int console_write(const char *data, int len)
 {
-    return (int) usart_write((const uint8_t *)data, (size_t) len);
+    if (console_usart == USART_NONE) {
+        return -1;
+    }
+    if (len <= 0) {
+        return 0;
+    }
+
+    return (int) usart_write(console_usart, (const uint8_t *) data, (size_t) len);
+}
+
+/* Placeholder dispatch until the .shell_commands registry below comes back —
+ * the linker script has no section for it yet. */
+void console_command(char *command)
+{
+    char *argv[MAX_ARGS];
+    int   argc = parse_args(command, argv, MAX_ARGS);
+
+    if (argc == 0) {
+        return;
+    }
+
+    if (strcmp(argv[0], "help") == 0) {
+        PRINT_INFO("Available commands:");
+        PRINT_INFO("  %-10s - %s", "help", "list available commands");
+        return;
+    }
+
+    PRINT_INFO("Command not found: %s", argv[0]);
 }
 
 // void Console_Command(char *command)
@@ -101,6 +135,8 @@ static void print_setup_information()
     // PRINT_INFO("VERSION: %u.%u.%u", MAJOR_VER, MINOR_VER, PATCH_VER);
     PRINT_INFO("GIT BRANCH: %s & HASH: %s", GIT_BRANCH, GIT_REV);
     PRINT_INFO("\n===========================\n");
+
+    console_write("sh> ", 4);
 }
 
 static int parse_args(char *line, char *argv[], int max_args)
@@ -130,30 +166,35 @@ static int parse_args(char *line, char *argv[], int max_args)
     return argc;
 }
 
-// static void process_rx_buffer(void)
-// {
-//     while (usart_read(&ch, 1) == 1) {
-//         char received = (char) ringbuffer_get(&rx_buffer);
-//
-//         // Process character
-//         if (received == '\r' || received == '\n') {
-//             if (cmd_index > 0) {
-//                 cmd_buffer[cmd_index] = '\0';
-//                 cmd_ready             = true;
-//                 console_write("\r\n", 2);
-//             }
-//         } else if (received == '\b' || received == 127) {
-//             // Backspace
-//             if (cmd_index > 0) {
-//                 cmd_index--;
-//                 console_write("\b \b", 3);
-//             }
-//         } else if (received >= 32 && received <= 126) {
-//             // Printable character
-//             if (cmd_index < 127) {
-//                 cmd_buffer[cmd_index++] = received;
-//                 console_write(&received, 1);
-//             }
-//         }
-//     }
-// }
+/* Stops pulling bytes once a line is complete so cmd_buffer survives until
+ * console_process has dispatched it. */
+static void process_rx_buffer(void)
+{
+    uint8_t received = 0;
+
+    while (!cmd_ready && usart_read(console_usart, &received, 1) == 1) {
+        // Process character
+        if (received == '\r' || received == '\n') {
+            console_write("\r\n", 2);
+            cmd_buffer[cmd_index] = '\0';
+
+            if (cmd_index > 0) {
+                cmd_ready = true;
+            } else {
+                console_write("sh> ", 4);
+            }
+        } else if (received == '\b' || received == 127) {
+            // Backspace
+            if (cmd_index > 0) {
+                cmd_index--;
+                console_write("\b \b", 3);
+            }
+        } else if (received >= 32 && received <= 126) {
+            // Printable character
+            if (cmd_index < CMD_BUFFER_SIZE - 1) {
+                cmd_buffer[cmd_index++] = (char) received;
+                console_write((const char *) &received, 1);
+            }
+        }
+    }
+}

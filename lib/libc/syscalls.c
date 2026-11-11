@@ -6,10 +6,7 @@
 #include <sys/types.h>
 
 // locals
-// #include "console.h"
-// #include "stm32h7rs_hal_usart.h"
-
-// extern USART_Handle usart3;
+#include "console.h"
 
 // Defined by linker script
 extern uint32_t _heap_start; // Start of heap
@@ -49,11 +46,20 @@ void *_sbrk(int incr)
 int _write(int file, char *ptr, int len)
 {
     (void) file;
-    (void) ptr;
-    (void) len;
 
-    // return Console_Write(ptr, len);
-    return 0;
+    int sent = 0;
+
+    /* usart_write is non-blocking, so spin while the ISR drains the tx
+     * ringbuffer rather than truncating what printf handed us. */
+    while (sent < len) {
+        int n = console_write(ptr + sent, len - sent);
+        if (n < 0) {
+            return sent; /* console not up yet — drop the rest */
+        }
+        sent += n;
+    }
+
+    return sent;
 }
 
 /**

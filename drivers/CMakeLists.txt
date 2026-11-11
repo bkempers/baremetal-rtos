@@ -1,6 +1,6 @@
 add_library(drivers STATIC
     led/led.c
-    # console/console.c — awaiting the hal_usart rewrite + new ringbuffer
+    console/console.c
 )
 
 #TODO: want to probably make this dynamic and configurable per 'app'
@@ -12,5 +12,5 @@ target_include_directories(drivers PUBLIC
     ${CMAKE_SOURCE_DIR}/lib          # compiler.h
 )
 
-# console.c keeps the rx/tx line buffers
-target_link_libraries(drivers PUBLIC ringbuffer)
+# console.h pulls in git_version.h for the boot banner
+target_link_libraries(drivers PUBLIC ringbuffer git_version)

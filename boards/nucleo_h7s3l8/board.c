@@ -6,45 +6,44 @@
 #include "hal_gpio.h"
 #include "hal_usart.h"
 #include "led.h"
+#include "console.h"
 
 #include "stm32h7rs_clock.h"
 
 static const led_obj board_leds[BOARD_LED_COUNT] = {
     [BOARD_LED_GREEN] = {
         .gpio = {
-            .gpio      = {.port = GPIO_PORT_D, .pin = LED1_PIN},
-            .mode      = GPIO_MODE_OUTPUT_PP,
-            .speed     = GPIO_SPEED_FREQ_LOW,
-            .pull      = GPIO_NOPULL_UP,
+            .gpio = {.port = GPIO_PORT_D, .pin = LED1_PIN},
+            .mode = GPIO_MODE_OUTPUT_PP,
+            .speed = GPIO_SPEED_FREQ_LOW,
+            .pull = GPIO_NOPULL_UP,
             .alternate = 0,
         },
         .active = GPIO_PIN_SET,
     },
     [BOARD_LED_YELLOW] = {
         .gpio = {
-            .gpio      = {.port = GPIO_PORT_D, .pin = LED2_PIN},
-            .mode      = GPIO_MODE_OUTPUT_PP,
-            .speed     = GPIO_SPEED_FREQ_LOW,
-            .pull      = GPIO_NOPULL_UP,
+            .gpio = {.port = GPIO_PORT_D, .pin = LED2_PIN},
+            .mode = GPIO_MODE_OUTPUT_PP,
+            .speed = GPIO_SPEED_FREQ_LOW,
+            .pull = GPIO_NOPULL_UP,
             .alternate = 0,
         },
         .active = GPIO_PIN_SET,
     },
     [BOARD_LED_RED] = {
         .gpio = {
-            .gpio      = {.port = GPIO_PORT_B, .pin = LED3_PIN},
-            .mode      = GPIO_MODE_OUTPUT_PP,
-            .speed     = GPIO_SPEED_FREQ_LOW,
-            .pull      = GPIO_NOPULL_UP,
+            .gpio = {.port = GPIO_PORT_B, .pin = LED3_PIN},
+            .mode = GPIO_MODE_OUTPUT_PP,
+            .speed = GPIO_SPEED_FREQ_LOW,
+            .pull = GPIO_NOPULL_UP,
             .alternate = 0,
         },
         .active = GPIO_PIN_SET,
     },
 };
 
-/* HSI at 64MHz, undivided. The PLL is deliberately absent: its old settings
- * (M=4 N=12 P=2) gave a 192MHz VCO, below this part's 400MHz minimum, and it
- * was never selected as SYSCLK anyway. */
+/* HSI at 64MHz */
 static const struct clock_cfg board_clock_cfg = {
     .sysclk_source = RCC_SYSCLKSOURCE_HSI,
 
@@ -84,14 +83,14 @@ static const usart_config board_console_cfg = {
     .stopbits = USART_STOPBITS_1,
     .mode = USART_MODE_TX_RX,
     .tx_pin = {
-        .gpio = {GPIO_PORT_D, GPIO_PIN_8},
+        .gpio = { .port = GPIO_PORT_D, .pin = GPIO_PIN_8},
         .mode = GPIO_MODE_ALT_FUNC_PP,
         .speed = GPIO_SPEED_FREQ_HIGH,
         .pull = GPIO_NOPULL_UP,
         .alternate = ((uint8_t) 0x07) // AF7
     },
     .rx_pin = {
-        .gpio = {GPIO_PORT_D, GPIO_PIN_9},
+        .gpio = { .port = GPIO_PORT_D, .pin = GPIO_PIN_9},
         .mode = GPIO_MODE_ALT_FUNC_PP,
         .speed = GPIO_SPEED_FREQ_HIGH,
         .pull = GPIO_PULL_UP,
@@ -106,7 +105,7 @@ void board_clock_init(void)
 
 void board_console_init(void)
 {
-    usart_init(&board_console_cfg);
+    console_init(&board_console_cfg);
 }
 
 int board_init(void)
@@ -114,7 +113,7 @@ int board_init(void)
     arch_init(); /* FPU on before any float runs */
 
     board_clock_init();
-    // board_console_init(); — awaiting chip/stm32h7rs/usart.c
+    board_console_init();
 
     if (led_init(board_leds, BOARD_LED_COUNT) != 0) {
         return -1;
