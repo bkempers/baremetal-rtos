@@ -1,5 +1,6 @@
 add_library(drivers STATIC
     led/led.c
+    button/button.c
     console/console.c
 )
 
@@ -9,6 +10,7 @@ target_include_directories(drivers PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/console
     ${CMAKE_CURRENT_SOURCE_DIR}/led
+    ${CMAKE_CURRENT_SOURCE_DIR}/button
     ${CMAKE_SOURCE_DIR}/lib          # compiler.h
 )
 

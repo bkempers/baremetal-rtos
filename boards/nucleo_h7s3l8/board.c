@@ -5,12 +5,13 @@
 #include "hal_clock.h"
 #include "hal_gpio.h"
 #include "hal_usart.h"
+#include "button.h"
 #include "led.h"
 #include "console.h"
 
 #include "stm32h7rs_clock.h"
 
-static const led_obj board_leds[BOARD_LED_COUNT] = {
+static const led_obj board_led_cfg[BOARD_LED_COUNT] = {
     [BOARD_LED_GREEN] = {
         .gpio = {
             .gpio = {.port = GPIO_PORT_D, .pin = LED1_PIN},
@@ -40,6 +41,18 @@ static const led_obj board_leds[BOARD_LED_COUNT] = {
             .alternate = 0,
         },
         .active = GPIO_PIN_SET,
+    },
+};
+
+static const button_obj board_button_cfg[BOARD_BUTTON_COUNT] = {
+    [BOARD_USER_BUTTON] = {
+        .gpio = {
+            .gpio = { .port = GPIO_PORT_C, .pin = BUTTON_PIN },
+            .mode = GPIO_MODE_INPUT,
+            .speed = GPIO_SPEED_FREQ_LOW,
+            .pull = GPIO_PULL_UP,
+            .alternate = 0,
+        },
     },
 };
 
@@ -115,7 +128,11 @@ int board_init(void)
     board_clock_init();
     board_console_init();
 
-    if (led_init(board_leds, BOARD_LED_COUNT) != 0) {
+    if (button_init(board_button_cfg, BOARD_BUTTON_COUNT) != 0) {
+        return -1;
+    }
+
+    if (led_init(board_led_cfg, BOARD_LED_COUNT) != 0) {
         return -1;
     }
 
