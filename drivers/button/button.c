@@ -1,5 +1,11 @@
 #include "button.h"
-#include "hal_gpio.h"
+
+#define BUTTON_MAX 4u
+
+static struct {
+    uint32_t pressed_time;
+    bool state;
+} button_state[BUTTON_MAX];
 
 static const button_obj *button_table;
 static size_t button_count;
@@ -30,7 +36,7 @@ int button_init(const button_obj *buttons, size_t count)
     return 0;
 }
 
-bool button_read(uint8_t id)
+bool button_pressed(uint8_t id)
 {
     const button_obj *button = button_get(id);
     if (button == NULL) {
@@ -38,5 +44,20 @@ bool button_read(uint8_t id)
     }
 
     gpio obj = button->gpio.gpio;
-    return (hal_gpio_read_input(&obj) == GPIO_PIN_SET);
+    uint32_t now = hal_time_ms();
+
+    // debounce check
+    if ((uint32_t) (now - button_state[id].pressed_time) < BUTTON_DEBOUNCE_MS) {
+        return false;
+    }
+
+    bool pressed = (hal_gpio_read_input(&obj) == GPIO_PIN_RESET);
+    if (pressed == button_state[id].state) {
+        return false;
+    }
+
+    button_state[id].pressed_time = now;
+    button_state[id].state = pressed;
+
+    return pressed;
 }

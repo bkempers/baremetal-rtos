@@ -24,6 +24,8 @@ typedef enum {
 
 #define HAL_MAX_DELAY 0xFFFFFFFFU
 
+uint32_t hal_time_ms(void);
+
 /* Unrecoverable hardware-bringup failure. Defined by the board, since only the
  * board knows how to signal it (LED, pin, breakpoint). Never returns. */
 void system_error_handle(void);

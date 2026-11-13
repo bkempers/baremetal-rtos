@@ -104,7 +104,7 @@ gpio_state hal_gpio_read_output(gpio *obj)
     return LL_GPIO_IsOutputPinSet(gpio_base[obj->port], GPIO_LL_PIN(obj->pin)) ? GPIO_PIN_SET : GPIO_PIN_RESET;
 }
 
-gpio_state hal_gpio_read_intput(gpio *obj)
+gpio_state hal_gpio_read_input(gpio *obj)
 {
     return LL_GPIO_IsInputPinSet(gpio_base[obj->port], GPIO_LL_PIN(obj->pin)) ? GPIO_PIN_SET : GPIO_PIN_RESET;
 }

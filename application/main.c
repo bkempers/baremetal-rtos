@@ -19,14 +19,27 @@ static void button_task(void)
 {
     //TODO: make this interrupt driven
     while(1) {
-        if (button_read(BOARD_USER_BUTTON)) {
+        volatile bool pressed = false;
+
+        if (button_pressed(BOARD_USER_BUTTON)) {
             led_toggle(BOARD_LED_GREEN);
             kernel_delay_ms(10);
             led_toggle(BOARD_LED_YELLOW);
             kernel_delay_ms(10);
             led_toggle(BOARD_LED_RED);
             kernel_delay_ms(10);
+
+            led_toggle(BOARD_LED_GREEN);
+            kernel_delay_ms(10);
+            led_toggle(BOARD_LED_YELLOW);
+            kernel_delay_ms(10);
+            led_toggle(BOARD_LED_RED);
+            kernel_delay_ms(10);
+
+            PRINT_INFO("button pressed");
         }
+
+        kernel_delay_ms(10);
     }
 }
 

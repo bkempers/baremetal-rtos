@@ -59,8 +59,8 @@ rebuild:
 clean:
 	rm -rf build compile_commands.json test/compile_commands.json
 
-flash: build
-	cmake --build $(BUILD_DIR) --target flash
+flash: $(TEST_DIR)/CMakeCache.txt
+	cmake --build $(BUILD_DIR) --target flash -j $(JOBS)
 
 erase: $(BUILD_DIR)/CMakeCache.txt
 	cmake --build $(BUILD_DIR) --target erase
