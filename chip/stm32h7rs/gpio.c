@@ -99,11 +99,14 @@ void hal_gpio_deinit(gpio *obj)
     return;
 }
 
-/* Reads ODR, the output latch, which is what this did before LL.
- * TODO: input pins need IDR — that is LL_GPIO_IsInputPinSet. */
-gpio_state hal_gpio_read(gpio *obj)
+gpio_state hal_gpio_read_output(gpio *obj)
 {
     return LL_GPIO_IsOutputPinSet(gpio_base[obj->port], GPIO_LL_PIN(obj->pin)) ? GPIO_PIN_SET : GPIO_PIN_RESET;
+}
+
+gpio_state hal_gpio_read_input(gpio *obj)
+{
+    return LL_GPIO_IsInputPinSet(gpio_base[obj->port], GPIO_LL_PIN(obj->pin)) ? GPIO_PIN_SET : GPIO_PIN_RESET;
 }
 
 void hal_gpio_write(gpio *obj, gpio_state state)

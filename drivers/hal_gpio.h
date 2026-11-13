@@ -88,7 +88,10 @@ typedef struct {
 
 void hal_gpio_init(const gpio_init *gpio);
 void hal_gpio_deinit(gpio *obj);
-gpio_state hal_gpio_read(gpio *obj);
+
+gpio_state hal_gpio_read_output(gpio *obj);
+gpio_state hal_gpio_read_input(gpio *obj);
+
 void hal_gpio_write(gpio *obj, gpio_state state);
 void hal_gpio_toggle(gpio *obj);
 

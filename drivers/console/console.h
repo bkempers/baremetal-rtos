@@ -16,6 +16,7 @@
 #define PRINT_DEBUG(format, ...) printf("%s:%d %s() - " format "\r\n", __FILE__, __LINE__, __FUNCTION__, ##__VA_ARGS__)
 #define PRINT_INFO(format, ...)  printf(format "\r\n", ##__VA_ARGS__)
 #define PRINT_ERROR(format, ...) printf("%s:%d %s() - " format "\r\n", __FILE__, __LINE__, __FUNCTION__, ##__VA_ARGS__)
+#define PRINT_RAW(format, ...) printf(format, %%__VA_ARGS__)
 
 int console_init(const usart_config *usart);
 void console_process(void);

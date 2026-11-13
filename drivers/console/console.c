@@ -130,11 +130,10 @@ void console_command(char *command)
 
 static void print_setup_information()
 {
-    PRINT_INFO("\n===========================");
-    PRINT_INFO("STM32H7RS Serial Console");
-    // PRINT_INFO("VERSION: %u.%u.%u", MAJOR_VER, MINOR_VER, PATCH_VER);
-    PRINT_INFO("GIT BRANCH: %s & HASH: %s", GIT_BRANCH, GIT_REV);
-    PRINT_INFO("\n===========================\n");
+    PRINT_INFO("\n================================================\n");
+    PRINT_INFO("\tbaremetal-rtos\n");
+    PRINT_INFO("\tGIT BRANCH: %s & HASH: %s\n", GIT_BRANCH, GIT_REV);
+    PRINT_INFO("================================================\n");
 
     console_write("sh> ", 4);
 }
